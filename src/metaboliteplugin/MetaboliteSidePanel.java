@@ -23,15 +23,15 @@ public class MetaboliteSidePanel implements Plugin
 		this.desktop = desktop;
 			
 		// create a new panel to show in the side bar
-		JPanel mySideBarPanel = new JPanel ();
-		mySideBarPanel.setLayout (new BorderLayout());
-		mySideBarPanel.add (new JLabel ("Metabolite information will be shown here."), BorderLayout.PAGE_START);
+		JPanel MetaboliteSideBarPanel = new JPanel ();
+		MetaboliteSideBarPanel.setLayout (new BorderLayout());
+		MetaboliteSideBarPanel.add (new JLabel ("Metabolite information will be shown here."), BorderLayout.PAGE_START);
 
 		// get a reference to the sidebar
 		JTabbedPane sidebarTabbedPane = desktop.getSideBarTabbedPane();
 
 		// add or panel with a given Title
-		sidebarTabbedPane.add("Metabolite Information", mySideBarPanel);
+		sidebarTabbedPane.add("Metabolite Information", MetaboliteSideBarPanel);
 				}
 
 	public void done() {}
