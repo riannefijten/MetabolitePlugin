@@ -6,11 +6,11 @@ import org.pathvisio.desktop.plugin.Plugin;
 
 public class Activator implements BundleActivator {
 
-	 private ExSidepanel plugin;
+	 private MetaboliteSidePanel plugin;
 
 	 	@Override
 	 	public void start(BundleContext context) throws Exception {
-	 		plugin = new ExSidepanel();
+	 		plugin = new MetaboliteSidePanel();
 	 		context.registerService(Plugin.class.getName(), plugin, null);
 	 	}
 
