@@ -11,6 +11,7 @@ import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
 
 import org.pathvisio.desktop.PvDesktop;
@@ -47,6 +48,7 @@ public class MetaboliteInfoGUI implements Plugin
 			
 		// create side bar
 		JPanel InfoPanel = new JPanel ();
+		JScrollPane scroller = new JScrollPane(InfoPanel);
 		InfoPanel.setLayout (new BoxLayout(InfoPanel, BoxLayout.PAGE_AXIS));
 		InfoPanel.add (new JLabel ("Metabolite information will be shown here."), BorderLayout.LINE_START);
 		InfoPanel.add(GeneralPanel);
