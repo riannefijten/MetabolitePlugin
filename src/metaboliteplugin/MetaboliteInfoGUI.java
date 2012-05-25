@@ -22,16 +22,25 @@ public class MetaboliteInfoGUI implements Plugin
 
 	public void init(PvDesktop desktop)
 	{
-		//Create sub-panel for general information about the metabolite.
+		//Create sub-panel for structure formula
+		JPanel GeneralPanelSub1 = new JPanel();
+			GeneralPanelSub1.add(new JLabel("Structure Formula"));
+			GeneralPanelSub1.setBorder(BorderFactory.createLineBorder(Color.CYAN));
+		//Create sub-panel for metabolite information
+		JPanel GeneralPanelSub2 = new JPanel();
+			GeneralPanelSub2.add(new JLabel("Metabolite info"));
+			GeneralPanelSub2.setBorder(BorderFactory.createLineBorder(Color.CYAN));
+		//Create panel for general information about the metabolite.
 		JPanel GeneralPanel = new JPanel();
-			GeneralPanel.add(new JLabel("Structure Formula")); //TODO instead of labels, implement CDK
-			GeneralPanel.add(new JLabel("Metabolite info")); //TODO instead of labels, implement CDK
+			GeneralPanel.setLayout(new BoxLayout(GeneralPanel, BoxLayout.X_AXIS));
+			GeneralPanel.add(GeneralPanelSub1); //TODO instead of labels, implement CDK
+			GeneralPanel.add(GeneralPanelSub2); //TODO instead of labels, implement CDK
 			GeneralPanel.setBorder(BorderFactory.createLineBorder(Color.BLACK));
-		//Create a sub-panel for MS data/information
+		//Create panel for MS data/information
 		JPanel MSPanel = new JPanel();
 			MSPanel.add(new JLabel("MS info")); //TODO instead of labels, implement MS data
 			MSPanel.setBorder(BorderFactory.createLineBorder(Color.RED));
-		//Create a sub-panel for NMR data/information
+		//Create panel for NMR data/information
 		JPanel NMRPanel = new JPanel();
 			NMRPanel.add(new JLabel("NMR info")); //TODO instead of labels, implement NMR data
 			NMRPanel.setBorder(BorderFactory.createLineBorder(Color.BLUE));
@@ -39,7 +48,7 @@ public class MetaboliteInfoGUI implements Plugin
 		// create side bar
 		JPanel InfoPanel = new JPanel ();
 		InfoPanel.setLayout (new BoxLayout(InfoPanel, BoxLayout.PAGE_AXIS));
-		InfoPanel.add (new JLabel ("Metabolite information will be shown here."), BorderLayout.PAGE_START);
+		InfoPanel.add (new JLabel ("Metabolite information will be shown here."), BorderLayout.LINE_START);
 		InfoPanel.add(GeneralPanel);
 		InfoPanel.add(MSPanel);
 		InfoPanel.add(NMRPanel);
