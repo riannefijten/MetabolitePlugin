@@ -31,15 +31,23 @@ public class MetaboliteInfoGUI implements Plugin
 {
 	private PvDesktop desktop;
 	
-	public Object Inchi() throws ClientProtocolException, IOException{
+	public static String Inchi(){
 		String cid = "methane";
 		HttpClient httpclient = new DefaultHttpClient();
 		HttpGet getInchi = new HttpGet("http://cactus.nci.nih.gov/chemical/structure/" + cid + "/stdinchikey");
-		HttpResponse response = httpclient.execute(getInchi);
-		HttpEntity entity = response.getEntity();
-		String inchiInfo = "InChI key of " + cid + ": " + (EntityUtils.toString(entity));
+		HttpResponse response = null;
+		String inchiInfo = null;
+		try {
+			response = httpclient.execute(getInchi);
+			HttpEntity entity = response.getEntity();
+			inchiInfo = "InChI key of " + cid + ": " + (EntityUtils.toString(entity));
+		} catch (ClientProtocolException e) {
+			inchiInfo = "Exception occured. Request failed.";
+		} catch (IOException e) {
+			inchiInfo = "Exception occured. Request failed.";
+		}
 		return inchiInfo;
-	}
+		}
 		
 	public Component sub1(){
 		//Create sub-panel for structure image
@@ -50,10 +58,10 @@ public class MetaboliteInfoGUI implements Plugin
 	}
 	public Component sub2() {	//Create sub-panel for metabolite information
 		
-		
+		JLabel label = new JLabel(Inchi());
 		//Create panel for metabolite info
 		JPanel GeneralPanelSub1 = new JPanel();
-		GeneralPanelSub1.add(new JLabel(inchiInfo));
+		GeneralPanelSub1.add(label);
 		GeneralPanelSub1.setBorder(BorderFactory.createLineBorder(Color.CYAN));
 		GeneralPanelSub1.setBackground(Color.white);
 		
@@ -63,7 +71,7 @@ public class MetaboliteInfoGUI implements Plugin
 		
 		return GeneralPanelSub1;
 	}
-	public Component GeneralPanel() throws ClientProtocolException, IOException {
+	public Component GeneralPanel(){
 		
 		//Create panel for general information about the metabolite.
 		JPanel GeneralPanel = new JPanel();
