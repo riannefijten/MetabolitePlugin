@@ -8,13 +8,21 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.Image;
+import java.awt.Toolkit;
+import java.io.File;
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
 
+import javax.imageio.ImageIO;
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
+import javax.swing.ImageIcon;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTabbedPane;
+import javax.swing.SwingConstants;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpException;
@@ -24,6 +32,9 @@ import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.util.EntityUtils;
+import org.openscience.cdk.io.MDLV2000Reader;
+import org.openscience.cdk.io.formats.MDLV2000Format;
+import org.openscience.cdk.templates.MoleculeFactory;
 import org.pathvisio.desktop.PvDesktop;
 import org.pathvisio.desktop.plugin.Plugin;
 
@@ -31,59 +42,70 @@ public class MetaboliteInfoGUI implements Plugin
 {
 	private PvDesktop desktop;
 	
+	//String for Cactus service
+	private static final String SERVICE = "http://cactus.nci.nih.gov/chemical/structure/";
+	
+	//Get the name of the metabolite.
+	public static String GetName(){
+		String name = "Glucose";
+		return name; 
+	}
+	
+	//Request InChI string from Cactus
 	public static String Inchi(){
-		String cid = "methane";
-		HttpClient httpclient = new DefaultHttpClient();
-		HttpGet getInchi = new HttpGet("http://cactus.nci.nih.gov/chemical/structure/" + cid + "/stdinchikey");
-		HttpResponse response = null;
 		String inchiInfo = null;
 		try {
+		//Set up connection and put InChI key into a string
+			HttpClient httpclient = new DefaultHttpClient();
+			HttpGet getInchi = new HttpGet(SERVICE + GetName() + "/stdinchikey");
+			
+			HttpResponse response = null;
 			response = httpclient.execute(getInchi);
+			
 			HttpEntity entity = response.getEntity();
-			inchiInfo = "InChI key of " + cid + ": " + (EntityUtils.toString(entity));
-		} catch (ClientProtocolException e) {
-			inchiInfo = "Exception occured. Request failed.";
-		} catch (IOException e) {
-			inchiInfo = "Exception occured. Request failed.";
+			inchiInfo = EntityUtils.toString(entity);
+		
+		} catch (ClientProtocolException ClientException) {
+			System.out.println(ClientException.getMessage());
+			ClientException.printStackTrace();
+		} catch (IOException IoException) {
+			System.out.println(IoException.getMessage());
+			IoException.printStackTrace();
+		} catch (Throwable throwable) {
+			  System.out.println(throwable.getMessage());
+			  throwable.printStackTrace();
 		}
+		System.out.println(inchiInfo);
 		return inchiInfo;
 		}
+	
+	//Request structure image from Cactus
+	public Image image(){
+		URL imageUrl = null;
+		try {
+			imageUrl = new URL(SERVICE + GetName() + "/image");
+		} catch (MalformedURLException e) {
+			e.printStackTrace();
+		}
 		
-	public Component sub1(){
-		//Create sub-panel for structure image
-		JPanel GeneralPanelSub2 = new JPanel();
-		GeneralPanelSub2.add(new JLabel("Structure image"));
-		GeneralPanelSub2.setBorder(BorderFactory.createLineBorder(Color.CYAN));
-		return GeneralPanelSub2;
+		Image image = Toolkit.getDefaultToolkit().createImage(imageUrl);
+
+		System.out.println(image);
+		return image;
 	}
-	public Component sub2() {	//Create sub-panel for metabolite information
-		
-		JLabel label = new JLabel(Inchi());
-		//Create panel for metabolite info
-		JPanel GeneralPanelSub1 = new JPanel();
-		GeneralPanelSub1.add(label);
-		GeneralPanelSub1.setBorder(BorderFactory.createLineBorder(Color.CYAN));
-		GeneralPanelSub1.setBackground(Color.white);
-		
-		//Set size of the panel to ensure enough room for both panels
-		Dimension panelD = new Dimension(130, 100);  
-		GeneralPanelSub1.setPreferredSize(panelD);
-		
-		return GeneralPanelSub1;
-	}
+
 	public Component GeneralPanel(){
 		
 		//Create panel for general information about the metabolite.
 		JPanel GeneralPanel = new JPanel();
-		GeneralPanel.setLayout(new BoxLayout(GeneralPanel, BoxLayout.X_AXIS));
-		GeneralPanel.add(sub1()); //TODO instead of labels, implement CDK
-		GeneralPanel.add(sub2());
-		
-		//TODO instead of labels, implement CDK
-		GeneralPanel.setBorder(BorderFactory.createLineBorder(Color.BLACK));
+		GeneralPanel.setBackground(Color.WHITE);
+		GeneralPanel.add(new JLabel("Metabolite name: " + GetName()));		
+		GeneralPanel.add(new JLabel(Inchi()));
+		GeneralPanel.add(new JLabel(new ImageIcon(image())));
 		
 		return GeneralPanel;
 	}
+	
 	public Component MSPanel(){
 		
 		//Create panel for MS data/information
@@ -93,6 +115,7 @@ public class MetaboliteInfoGUI implements Plugin
 		
 		return MSPanel;
 	}
+	
 	public Component NMRPanel(){
 		
 		//Create panel for NMR data/information
@@ -102,6 +125,7 @@ public class MetaboliteInfoGUI implements Plugin
 		
 		return NMRPanel;
 	}
+	
 	public void init(PvDesktop desktop)
 	{
 		// TODO if datanode type equals metabolite{
@@ -110,7 +134,8 @@ public class MetaboliteInfoGUI implements Plugin
 		JPanel scroller = new JPanel();
 		
 		scroller.setLayout (new BoxLayout(scroller, BoxLayout.PAGE_AXIS));
-		scroller.add (new JLabel ("Metabolite information will be shown here."), BorderLayout.LINE_START);
+		scroller.setBackground(Color.white);
+		scroller.add (new JLabel ("Metabolite information will be shown here."), BorderLayout.PAGE_START);
 		scroller.add(GeneralPanel());
 		scroller.add(MSPanel());
 		scroller.add(NMRPanel());
