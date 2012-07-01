@@ -9,10 +9,12 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.awt.Graphics2D;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Image;
 import java.awt.Toolkit;
+import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.Reader;
 import java.net.MalformedURLException;
@@ -150,6 +152,7 @@ public class MetaboliteInfoGUI implements Plugin
 		}
 		
 		Image image = Toolkit.getDefaultToolkit().createImage(imageUrl);
+	
 		return image;
 	}
 	
