@@ -105,6 +105,7 @@ public class MetaboliteInfo extends JPanel implements SelectionListener, Pathway
 
 		private void doQuery() 
 		{
+			
 			currRef = input.getXref();
 			
 			//System.err.println("\tSetting input " + e + " using " + threads);
@@ -176,10 +177,27 @@ public class MetaboliteInfo extends JPanel implements SelectionListener, Pathway
 			public void run() {
 
 				performTask();
+				
+				MSimageLow();
+				MSImageMed();
+				MSImageHigh();
+				
+				c13NMR();
+				h1NMR();
+
 				if(this.equals(lastThread) && input != e) {
 
 					e = input;
+					
 					performTask();
+					
+					MSimageLow();
+					MSImageMed();
+					MSImageHigh();
+					
+					c13NMR();
+					h1NMR();
+					
 					lastThread = null;
 				}
 
@@ -197,6 +215,7 @@ public class MetaboliteInfo extends JPanel implements SelectionListener, Pathway
 					if (destrefs.size() > 0)
 					{
 						String HMDB = ref.getId();
+						System.out.println("HMDB: "+HMDB);
 						if(input == e) setText(HMDB);
 					}
 				}
@@ -208,19 +227,172 @@ public class MetaboliteInfo extends JPanel implements SelectionListener, Pathway
 			}
 		}
 		
-		String text;
 		
-		private void setText(String newText) {
-			text = newText;
+// setText(text) will contain the HMDB ID.		
+		String text;
 
+		public String setText(String newText) {
+			text = newText;
+			System.out.println("Text1: " + text);
+			return text;
+			
 		}
 		
+// Mass spectroscopy image low energy
+		public void MSimageLow(){
+			Image image = null;
+			URL imageUrl = null;
+			
+			System.out.println("output: " + setText(text));
+			try {
+				imageUrl = new URL("http://www.hmdb.ca/labm/metabolites/" + setText(text) + "/ms/spectra/" + setText(text) + "L.png");
+			} catch (MalformedURLException e) {
+				e.printStackTrace();
+			}
+			System.out.println("URL: " + imageUrl);
+			
+			try {
+				image = ImageIO.read(imageUrl);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			System.out.println(image);
+			final BufferedImage bufferedImage = new BufferedImage(400, 500, BufferedImage.TYPE_INT_RGB);
+	        final Graphics2D graphics2D = bufferedImage.createGraphics();
+
+	        graphics2D.setComposite(AlphaComposite.Src);
+	        graphics2D.drawImage(image, 0, 0, 400, 500, null);
+	        graphics2D.dispose();
+	        panel.add(new JLabel(new ImageIcon(bufferedImage)));
+		}
+// Mass spectroscopy image medium energy	
+		public void MSImageMed(){
+			URL imageUrl = null;
+			try {
+				imageUrl = new URL("http://www.hmdb.ca/labm/metabolites/" 
+				+ setText(text) + "/ms/spectraM/" + setText(text) + "M.png");
+			} catch (MalformedURLException e) {
+				e.printStackTrace();
+			}
+			
+			Image image = null;
+			try {
+				image = ImageIO.read(imageUrl);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
+			final BufferedImage bufferedImage = new BufferedImage(400, 500, BufferedImage.TYPE_INT_RGB);
+	        final Graphics2D graphics2D = bufferedImage.createGraphics();
+	
+	        graphics2D.setComposite(AlphaComposite.Src);
+	        graphics2D.drawImage(image, 0, 0, 400, 500, null);
+	        graphics2D.dispose();
+	        panel.add(new JLabel(new ImageIcon(bufferedImage)));
+		}
+// Mass spectroscopy image high energy
+		public void MSImageHigh(){
+			URL imageUrl = null;
+			try {
+				imageUrl = new URL("http://www.hmdb.ca/labm/metabolites/" 
+				+ setText(text) + "/ms/spectraH/" + setText(text) + "H.png");
+			} catch (MalformedURLException e) {
+				e.printStackTrace();
+			}
+			
+			Image image = null;
+			try {
+				image = ImageIO.read(imageUrl);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			final BufferedImage bufferedImage = new BufferedImage(400, 500, BufferedImage.TYPE_INT_RGB);
+	        final Graphics2D graphics2D = bufferedImage.createGraphics();
+	      
+	        graphics2D.setComposite(AlphaComposite.Src);
+	        graphics2D.drawImage(image, 0, 0, 400, 500, null);
+	        graphics2D.dispose();
+	        
+	        panel.add(new JLabel(new ImageIcon(bufferedImage)));
+		}
+
+		public void h1NMR(){
+			String H1NMR = null;
+	
+			try {
+			//Set up connection and put InChI key into a string
+				HttpClient httpclient = new DefaultHttpClient();
+				HttpGet getH1NMR = new HttpGet("http://www.hmdb.ca/labm/metabolites/"
+				+ setText(text) + "/chemical/pred_hnmr_peaklist/" + setText(text) + "_peaks.txt");
+				
+				HttpResponse response = null;
+				response = httpclient.execute(getH1NMR);
+				
+				HttpEntity entity = response.getEntity();
+				H1NMR = EntityUtils.toString(entity);
+			
+			} catch (ClientProtocolException ClientException) {
+				System.out.println(ClientException.getMessage());
+				ClientException.printStackTrace();
+			} catch (IOException IoException) {
+				System.out.println(IoException.getMessage());
+				IoException.printStackTrace();
+			} catch (Throwable throwable) {
+				  System.out.println(throwable.getMessage());
+				  throwable.printStackTrace();
+			}
+			
+			JTextArea H1 = new JTextArea(H1NMR);
+			H1.setEditable(false);
+			
+			panel.add(new JTextArea(H1NMR));
+			
+		}
+		
+		public void c13NMR(){
+			String C13NMR = null;
+			try {
+			//Set up connection and put InChI key into a string
+				HttpClient httpclient = new DefaultHttpClient();
+				HttpGet getC13NMR = new HttpGet("http://www.hmdb.ca/labm/metabolites/"
+				+ setText(text) + "/chemical/pred_cnmr_peaklist/" + setText(text) + "_peaks.txt");
+				
+				HttpResponse response = null;
+				response = httpclient.execute(getC13NMR);
+				
+				HttpEntity entity = response.getEntity();
+				C13NMR = EntityUtils.toString(entity);
+			
+			} catch (ClientProtocolException ClientException) {
+				System.out.println(ClientException.getMessage());
+				ClientException.printStackTrace();
+			} catch (IOException IoException) {
+				System.out.println(IoException.getMessage());
+				IoException.printStackTrace();
+			} catch (Throwable throwable) {
+				  System.out.println(throwable.getMessage());
+				  throwable.printStackTrace();
+			}
+			
+			JTextArea C13 = new JTextArea(C13NMR);
+			C13.setEditable(false);
+			
+			panel.add(new JTextArea(C13NMR));
+		}
+		
+		
+//Make panel, scrollpanel and swingengine for execution of the plugin		
 		private static final long serialVersionUID = 1L;
 		private final SwingEngine se;
 		private final JPanel panel;
+		private final JScrollPane scroll;
 		
 		public MetaboliteInfo(SwingEngine se)
 		{
+			super();
 			Engine engine = se.getEngine();
 			engine.addApplicationEventListener(this);
 			VPathway vp = engine.getActiveVPathway();
@@ -231,8 +403,11 @@ public class MetaboliteInfo extends JPanel implements SelectionListener, Pathway
 			
 			setLayout (new BorderLayout());
 
-			panel = new JPanel();		
-			add (panel, BorderLayout.CENTER);			 
+			panel = new JPanel();
+			panel.setLayout(new GridLayout(0,1));
+				
+			scroll = new JScrollPane(panel);
+			add (scroll, BorderLayout.CENTER);			 
 			
 		}
 	
@@ -306,113 +481,40 @@ public class MetaboliteInfo extends JPanel implements SelectionListener, Pathway
 //		return inchiKeyInfo;
 //	}
 //	
-////	public static String Pubchem(){
-////		String cid = "5793";
-////		String pubChemInchi = null;
-////		try {
-////		
-////		HttpClient httpclient = new DefaultHttpClient();
-////		HttpGet pubChemRequest = new HttpGet("http://pubchem.ncbi.nlm.nih.gov/summary/summary.cgi?cid="
-////				+ cid + "&disopt=SaveXML");
-////		pubChemRequest.getAllHeaders();
-////		System.out.println(pubChemRequest);
-////
-////		HttpResponse response = null;
-////		response = httpclient.execute(pubChemRequest);
-////		HttpEntity entity = response.getEntity();
-////		pubChemInchi = EntityUtils.toString(entity);
-////		System.out.println(pubChemInchi);
-////		
-////	} catch (ClientProtocolException ClientException) {
-////		System.out.println(ClientException.getMessage());
-////		ClientException.printStackTrace();
-////	} catch (IOException IoException) {
-////		System.out.println(IoException.getMessage());
-////		IoException.printStackTrace();
-////	} catch (Throwable throwable) {
-////		  System.out.println(throwable.getMessage());
-////		  throwable.printStackTrace();
-////	}
-////		return pubChemInchi;
-////		
-////	}
-////	
-//	public Image MSImageLow(){
-//		URL imageUrl = null;
+//	public static String Pubchem(){
+//		String cid = "5793";
+//		String pubChemInchi = null;
 //		try {
-//			imageUrl = new URL("http://www.hmdb.ca/labm/metabolites/" + HMDB + "/ms/spectra/" + HMDB + "L.png");
-//		} catch (MalformedURLException e) {
-//			e.printStackTrace();
-//		}
 //		
-//		Image image = null;
-//		try {
-//			image = ImageIO.read(imageUrl);
-//		} catch (IOException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
-//		
-//		final BufferedImage bufferedImage = new BufferedImage(400, 500, BufferedImage.TYPE_INT_RGB);
-//        final Graphics2D graphics2D = bufferedImage.createGraphics();
+//		HttpClient httpclient = new DefaultHttpClient();
+//		HttpGet pubChemRequest = new HttpGet("http://pubchem.ncbi.nlm.nih.gov/summary/summary.cgi?cid="
+//				+ cid + "&disopt=SaveXML");
+//		pubChemRequest.getAllHeaders();
+//		System.out.println(pubChemRequest);
 //
-//        graphics2D.setComposite(AlphaComposite.Src);
-//        graphics2D.drawImage(image, 0, 0, 400, 500, null);
-//        graphics2D.dispose();
-//		return bufferedImage;
+//		HttpResponse response = null;
+//		response = httpclient.execute(pubChemRequest);
+//		HttpEntity entity = response.getEntity();
+//		pubChemInchi = EntityUtils.toString(entity);
+//		System.out.println(pubChemInchi);
+//		
+//	} catch (ClientProtocolException ClientException) {
+//		System.out.println(ClientException.getMessage());
+//		ClientException.printStackTrace();
+//	} catch (IOException IoException) {
+//		System.out.println(IoException.getMessage());
+//		IoException.printStackTrace();
+//	} catch (Throwable throwable) {
+//		  System.out.println(throwable.getMessage());
+//		  throwable.printStackTrace();
+//	}
+//		return pubChemInchi;
+//		
 //	}
 //	
-//	public Image MSImageMed(){
-//		URL imageUrl = null;
-//		try {
-//			imageUrl = new URL("http://www.hmdb.ca/labm/metabolites/" 
-//			+ HMDB + "/ms/spectraM/" + HMDB + "M.png");
-//		} catch (MalformedURLException e) {
-//			e.printStackTrace();
-//		}
-//		
-//		Image image = null;
-//		try {
-//			image = ImageIO.read(imageUrl);
-//		} catch (IOException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
-//		
-//		final BufferedImage bufferedImage = new BufferedImage(400, 500, BufferedImage.TYPE_INT_RGB);
-//        final Graphics2D graphics2D = bufferedImage.createGraphics();
-//
-//        graphics2D.setComposite(AlphaComposite.Src);
-//        graphics2D.drawImage(image, 0, 0, 400, 500, null);
-//        graphics2D.dispose();
-//		return bufferedImage;
-//	}
-//	
-//	public static Image MSImageHigh(){
-//		URL imageUrl = null;
-//		try {
-//			imageUrl = new URL("http://www.hmdb.ca/labm/metabolites/" 
-//			+ HMDB + "/ms/spectraH/" + HMDB + "H.png");
-//		} catch (MalformedURLException e) {
-//			e.printStackTrace();
-//		}
-//		
-//		Image image = null;
-//		try {
-//			image = ImageIO.read(imageUrl);
-//		} catch (IOException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
-//		final BufferedImage bufferedImage = new BufferedImage(400, 500, BufferedImage.TYPE_INT_RGB);
-//        final Graphics2D graphics2D = bufferedImage.createGraphics();
-//      
-//        graphics2D.setComposite(AlphaComposite.Src);
-//        graphics2D.drawImage(image, 0, 0, 400, 500, null);
-//        graphics2D.dispose();
-//        
-//		return bufferedImage;
-//	}
+	
+	
+
 //	
 //	public String h1NMR(){
 //		String H1NMR = null;
@@ -483,7 +585,7 @@ public class MetaboliteInfo extends JPanel implements SelectionListener, Pathway
 //		return image;
 //	}
 //
-//	public Component GeneralPanel(PathwayElement e){
+//	public Component GeneralPanel(){
 //
 //		String name = "Metabolite name: " + GetName() + "\n \n";
 //		String inchiKey = InchiKey();
@@ -518,15 +620,13 @@ public class MetaboliteInfo extends JPanel implements SelectionListener, Pathway
 //		MSPanel.add(new JLabel("MS info")); //TODO instead of labels, implement MS data
 //		MSPanel.setBorder(BorderFactory.createLineBorder(Color.RED));
 //		MSPanel.setLayout(new BoxLayout(MSPanel, BoxLayout.Y_AXIS));
-//		JPanel MSPanel2 = new JPanel();
-//		MSPanel.add(MSPanel2);
 //		MSPanel.add(new JLabel(new ImageIcon(MSImageLow())));
 //		MSPanel.add(new JLabel(new ImageIcon(MSImageMed())));
 //		MSPanel.add(new JLabel(new ImageIcon(MSImageHigh())));
 //		
 //		return MSPanel;
 //	}
-//	
+	
 //	public Component NMRPanel(){
 //		
 //		//Create panel for NMR data/information
@@ -550,37 +650,19 @@ public class MetaboliteInfo extends JPanel implements SelectionListener, Pathway
 //		return NMRPanel;
 //	}
 //	
-//	public void init(PvDesktop desktop)
-//	{
-//		// TODO if datanode type equals metabolite{
-//				
-//		// create side bar
-//		JPanel panel = new JPanel();
-//		
-//		panel.setLayout (new BoxLayout(panel, BoxLayout.PAGE_AXIS));
-//		//panel.setBackground(Color.white);
-//		panel.add(MSPanel());
-//		panel.add(NMRPanel());
-//		
-//		// get a reference to the sidebar
-//		JTabbedPane sidebarTabbedPane = desktop.getSideBarTabbedPane();
-//		JScrollPane jsp = new JScrollPane(panel);
-//		// add side bar title
-//		sidebarTabbedPane.add("Metabolite Information", jsp);
-//		
-//	}
 //	
-////	
-////	private boolean disposed = false;
-////	public void dispose()
-////	{
-////		assert (!disposed);
-////		engine.removeApplicationEventListener(this);
-////		VPathway vpwy = engine.getActiveVPathway();
-////		if (vpwy != null) vpwy.removeSelectionListener(this);
-////		executor.shutdown();
-////		disposed = true;
-////	}
+//	
+//	
+//	private boolean disposed = false;
+//	public void dispose()
+//	{
+//		assert (!disposed);
+//		engine.removeApplicationEventListener(this);
+//		VPathway vpwy = engine.getActiveVPathway();
+//		if (vpwy != null) vpwy.removeSelectionListener(this);
+//		executor.shutdown();
+//		disposed = true;
+//	}
 
 	public void done() {}
 
