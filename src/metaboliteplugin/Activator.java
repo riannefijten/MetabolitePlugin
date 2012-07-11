@@ -6,11 +6,11 @@ import org.pathvisio.desktop.plugin.Plugin;
 
 public class Activator implements BundleActivator {
 
-	 private MetaboliteInfo plugin;
+	 private MetaboliteInfoPlugin plugin;
 
 	 	@Override
 	 	public void start(BundleContext context) throws Exception {
-	 		plugin = new MetaboliteInfo();
+	 		plugin = new MetaboliteInfoPlugin();
 	 		context.registerService(Plugin.class.getName(), plugin, null);
 	 	}
 
