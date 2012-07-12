@@ -99,8 +99,6 @@ public class MetaboliteInfo extends JPanel implements SelectionListener, Pathway
 				input.addListener(this);
 				doQuery();
 			}
-			System.out.println("input: " + input);
-			System.out.println("e: " + e);
 		}
 
 		private void doQuery() 
@@ -177,26 +175,16 @@ public class MetaboliteInfo extends JPanel implements SelectionListener, Pathway
 			public void run() {
 
 				performTask();
+				MSimages();
+				NMRTables();
 				
-				MSimageLow();
-				MSImageMed();
-				MSImageHigh();
-				
-				c13NMR();
-				h1NMR();
-
 				if(this.equals(lastThread) && input != e) {
 
 					e = input;
 					
 					performTask();
-					
-					MSimageLow();
-					MSImageMed();
-					MSImageHigh();
-					
-					c13NMR();
-					h1NMR();
+					MSimages();		
+					NMRTables();
 					
 					lastThread = null;
 				}
@@ -215,8 +203,9 @@ public class MetaboliteInfo extends JPanel implements SelectionListener, Pathway
 					if (destrefs.size() > 0)
 					{
 						String HMDB = ref.getId();
-						System.out.println("HMDB: "+HMDB);
-						if(input == e) setText(HMDB);
+						String smiles = Utils.oneOf (
+								gdbManager.getCurrentGdb().getAttributes (Utils.oneOf(destrefs), "SMILES"));
+						if(input == e) {setText(HMDB); setText2(smiles);}
 					}
 				}
 				catch (IDMapperException e)
@@ -230,160 +219,199 @@ public class MetaboliteInfo extends JPanel implements SelectionListener, Pathway
 		
 // setText(text) will contain the HMDB ID.		
 		String text;
+		String text2;
 
 		public String setText(String newText) {
 			text = newText;
-			System.out.println("Text1: " + text);
-			return text;
+			System.out.println("HMDB: "+ text);
+			return text;		
+		}
+		
+		public String setText2(String newText) {
+			text2 = newText;
+			System.out.println("SMILES: "+ text2);
+			return text2;
+		}
+				
+		//Request InChI string from Cactus
+		public void Inchi(){
+			String inchiInfo = null;
+			try {
+			//Set up connection and put InChI key into a string
+				HttpClient httpclient = new DefaultHttpClient();
+				HttpGet getInchi = new HttpGet("http://cactus.nci.nih.gov/chemical/structure/" + setText2(text2) + "/stdinchi");
+				
+				HttpResponse response = null;
+				response = httpclient.execute(getInchi);
+				
+				HttpEntity entity = response.getEntity();
+				inchiInfo = EntityUtils.toString(entity);
 			
+				} catch (ClientProtocolException ClientException) {
+					System.out.println(ClientException.getMessage());
+					ClientException.printStackTrace();
+				} catch (IOException IoException) {
+					System.out.println(IoException.getMessage());
+					IoException.printStackTrace();
+				} catch (Throwable throwable) {
+					  System.out.println(throwable.getMessage());
+					  throwable.printStackTrace();
+				}
+			
+			panel.removeAll();
+			panel.add(new JLabel(inchiInfo));
+			}
+		
+		//Request InChI string from Cactus
+		public void InchiKey(){
+			String inchiKeyInfo = null;
+			try {
+			//Set up connection and put InChI key into a string
+				HttpClient httpclient = new DefaultHttpClient();
+				HttpGet getInchiKey = new HttpGet("http://cactus.nci.nih.gov/chemical/structure/" + setText2(text2) + "/stdinchikey");
+				
+				HttpResponse response = null;
+				response = httpclient.execute(getInchiKey);
+				
+				HttpEntity entity = response.getEntity();
+				inchiKeyInfo = EntityUtils.toString(entity);
+			
+			} catch (ClientProtocolException ClientException) {
+				System.out.println(ClientException.getMessage());
+				ClientException.printStackTrace();
+			} catch (IOException IoException) {
+				System.out.println(IoException.getMessage());
+				IoException.printStackTrace();
+			} catch (Throwable throwable) {
+				  System.out.println(throwable.getMessage());
+				  throwable.printStackTrace();
+			}
+			panel.add(new JLabel(inchiKeyInfo));
+		}
+		
+		//Request structure image from Cactus
+		public void moleculeImage(){
+			URL imageUrl = null;
+			try {
+				imageUrl = new URL("http://cactus.nci.nih.gov/chemical/structure/" + setText2(text2) + "/image");
+			} catch (MalformedURLException e) {
+				e.printStackTrace();
+			}
+			
+			Image image = Toolkit.getDefaultToolkit().createImage(imageUrl);
+	
+			panel.add(new JLabel(new ImageIcon(image)));
 		}
 		
 // Mass spectroscopy image low energy
-		public void MSimageLow(){
-			Image image = null;
-			URL imageUrl = null;
+		public void MSimages(){
 			
-			System.out.println("output: " + setText(text));
+			Image imageLow = null;
+			Image imageMed = null;
+			Image imageHigh = null;
+			
+			URL imageUrlLow = null; 
+			URL imageUrlMed = null;
+			URL imageUrlHigh = null;
+		//Set up connection
 			try {
-				imageUrl = new URL("http://www.hmdb.ca/labm/metabolites/" + setText(text) + "/ms/spectra/" + setText(text) + "L.png");
+				imageUrlLow = new URL("http://www.hmdb.ca/labm/metabolites/" + setText(text) + "/ms/spectra/" + setText(text) + "L.png");
+				imageUrlMed = new URL("http://www.hmdb.ca/labm/metabolites/" + setText(text) + "/ms/spectraM/" + setText(text) + "M.png");
+				imageUrlHigh = new URL("http://www.hmdb.ca/labm/metabolites/" + setText(text) + "/ms/spectraH/" + setText(text) + "H.png");
 			} catch (MalformedURLException e) {
-				e.printStackTrace();
+				System.out.println("Image could not be loaded. Please try again later");
+				panel.add(new JLabel("Image could not be loaded. Please try again later"));
 			}
-			System.out.println("URL: " + imageUrl);
-			
+		//Read image from url
 			try {
-				image = ImageIO.read(imageUrl);
+				imageLow = ImageIO.read(imageUrlLow);
+				imageMed = ImageIO.read(imageUrlMed);
+				imageHigh = ImageIO.read(imageUrlHigh);
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				System.out.println("Image could not be loaded. Please try again later");
+				panel.add(new JLabel("Image could not be loaded. Please try again later"));
 			}
-			System.out.println(image);
-			final BufferedImage bufferedImage = new BufferedImage(400, 500, BufferedImage.TYPE_INT_RGB);
-	        final Graphics2D graphics2D = bufferedImage.createGraphics();
+		// Low energy image
+			final BufferedImage bufferedImageLow = new BufferedImage(400, 500, BufferedImage.TYPE_INT_RGB);
+	        final Graphics2D gLow = bufferedImageLow.createGraphics();
 
-	        graphics2D.setComposite(AlphaComposite.Src);
-	        graphics2D.drawImage(image, 0, 0, 400, 500, null);
-	        graphics2D.dispose();
-	        panel.add(new JLabel(new ImageIcon(bufferedImage)));
-		}
-// Mass spectroscopy image medium energy	
-		public void MSImageMed(){
-			URL imageUrl = null;
-			try {
-				imageUrl = new URL("http://www.hmdb.ca/labm/metabolites/" 
-				+ setText(text) + "/ms/spectraM/" + setText(text) + "M.png");
-			} catch (MalformedURLException e) {
-				e.printStackTrace();
-			}
-			
-			Image image = null;
-			try {
-				image = ImageIO.read(imageUrl);
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			
-			final BufferedImage bufferedImage = new BufferedImage(400, 500, BufferedImage.TYPE_INT_RGB);
-	        final Graphics2D graphics2D = bufferedImage.createGraphics();
-	
-	        graphics2D.setComposite(AlphaComposite.Src);
-	        graphics2D.drawImage(image, 0, 0, 400, 500, null);
-	        graphics2D.dispose();
-	        panel.add(new JLabel(new ImageIcon(bufferedImage)));
-		}
-// Mass spectroscopy image high energy
-		public void MSImageHigh(){
-			URL imageUrl = null;
-			try {
-				imageUrl = new URL("http://www.hmdb.ca/labm/metabolites/" 
-				+ setText(text) + "/ms/spectraH/" + setText(text) + "H.png");
-			} catch (MalformedURLException e) {
-				e.printStackTrace();
-			}
-			
-			Image image = null;
-			try {
-				image = ImageIO.read(imageUrl);
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			final BufferedImage bufferedImage = new BufferedImage(400, 500, BufferedImage.TYPE_INT_RGB);
-	        final Graphics2D graphics2D = bufferedImage.createGraphics();
-	      
-	        graphics2D.setComposite(AlphaComposite.Src);
-	        graphics2D.drawImage(image, 0, 0, 400, 500, null);
-	        graphics2D.dispose();
+	        gLow.setComposite(AlphaComposite.Src);
+	        gLow.drawImage(imageLow, 0, 0, 400, 500, null);
+	        gLow.dispose();
 	        
-	        panel.add(new JLabel(new ImageIcon(bufferedImage)));
+	    //Medium energy image
+	        final BufferedImage bufferedImageMed = new BufferedImage(400, 500, BufferedImage.TYPE_INT_RGB);
+	        final Graphics2D gMed = bufferedImageLow.createGraphics();
+
+	        gMed.setComposite(AlphaComposite.Src);
+	        gMed.drawImage(imageLow, 0, 0, 400, 500, null);
+	        gMed.dispose();
+	        
+	    //High energy image
+	        final BufferedImage bufferedImageHigh = new BufferedImage(400, 500, BufferedImage.TYPE_INT_RGB);
+	        final Graphics2D gHigh = bufferedImageLow.createGraphics();
+
+	        gHigh.setComposite(AlphaComposite.Src);
+	        gHigh.drawImage(imageLow, 0, 0, 400, 500, null);
+	        gHigh.dispose();
+	        
+	    //Add images to panel
+	        panel.add(new JLabel(new ImageIcon(bufferedImageLow)));
+	        panel.add(new JLabel(new ImageIcon(bufferedImageMed)));
+	        panel.add(new JLabel(new ImageIcon(bufferedImageHigh)));
 		}
 
-		public void h1NMR(){
-			String H1NMR = null;
+		
+		
+		public void NMRTables(){
+			String HNMR = null;
+			String CNMR = null;
+			HttpResponse responseH = null;
+			HttpResponse responseC = null;
 	
 			try {
-			//Set up connection and put InChI key into a string
+		//Set up connection
 				HttpClient httpclient = new DefaultHttpClient();
-				HttpGet getH1NMR = new HttpGet("http://www.hmdb.ca/labm/metabolites/"
-				+ setText(text) + "/chemical/pred_hnmr_peaklist/" + setText(text) + "_peaks.txt");
 				
-				HttpResponse response = null;
-				response = httpclient.execute(getH1NMR);
+				HttpGet getHNMR = new HttpGet("http://www.hmdb.ca/labm/metabolites/" + setText(text) + "/chemical/pred_hnmr_peaklist/" + setText(text) + "_peaks.txt");
+				HttpGet getCNMR = new HttpGet("http://www.hmdb.ca/labm/metabolites/" + setText(text) + "/chemical/pred_cnmr_peaklist/" + setText(text) + "_peaks.txt");
 				
-				HttpEntity entity = response.getEntity();
-				H1NMR = EntityUtils.toString(entity);
+				responseH = httpclient.execute(getHNMR);
+				responseC = httpclient.execute(getCNMR);
+				
+			//Generate HNMR peak list
+				HttpEntity entityH = responseH.getEntity();
+				HNMR = EntityUtils.toString(entityH);
+				
+			//Generate CNMR peak list
+				HttpEntity entityC = responseH.getEntity();
+				HNMR = EntityUtils.toString(entityC);
+
 			
 			} catch (ClientProtocolException ClientException) {
-				System.out.println(ClientException.getMessage());
-				ClientException.printStackTrace();
+				System.out.println("Peak list could not be loaded. Please try again later");
+				panel.add(new JLabel("Peak list could not be loaded. Please try again later"));
 			} catch (IOException IoException) {
-				System.out.println(IoException.getMessage());
-				IoException.printStackTrace();
+				System.out.println("Peak list could not be loaded. Please try again later");
+				panel.add(new JLabel("Peak list could not be loaded. Please try again later"));
 			} catch (Throwable throwable) {
-				  System.out.println(throwable.getMessage());
-				  throwable.printStackTrace();
+				System.out.println("Peak list could not be loaded. Please try again later");
+				panel.add(new JLabel("Peak list could not be loaded. Please try again later"));
 			}
-			
-			JTextArea H1 = new JTextArea(H1NMR);
-			H1.setEditable(false);
-			
-			panel.add(new JTextArea(H1NMR));
+
+		//put peak lists into JTextAreas
+			JTextArea H = new JTextArea(HNMR);
+				H.setEditable(false);
+			JTextArea C = new JTextArea(CNMR);
+				C.setEditable(false);
+
+		// Add TextAreas to panel
+			panel.add(H);
+			panel.add(C);
 			
 		}
 		
-		public void c13NMR(){
-			String C13NMR = null;
-			try {
-			//Set up connection and put InChI key into a string
-				HttpClient httpclient = new DefaultHttpClient();
-				HttpGet getC13NMR = new HttpGet("http://www.hmdb.ca/labm/metabolites/"
-				+ setText(text) + "/chemical/pred_cnmr_peaklist/" + setText(text) + "_peaks.txt");
-				
-				HttpResponse response = null;
-				response = httpclient.execute(getC13NMR);
-				
-				HttpEntity entity = response.getEntity();
-				C13NMR = EntityUtils.toString(entity);
-			
-			} catch (ClientProtocolException ClientException) {
-				System.out.println(ClientException.getMessage());
-				ClientException.printStackTrace();
-			} catch (IOException IoException) {
-				System.out.println(IoException.getMessage());
-				IoException.printStackTrace();
-			} catch (Throwable throwable) {
-				  System.out.println(throwable.getMessage());
-				  throwable.printStackTrace();
-			}
-			
-			JTextArea C13 = new JTextArea(C13NMR);
-			C13.setEditable(false);
-			
-			panel.add(new JTextArea(C13NMR));
-		}
-		
-		
+	
 //Make panel, scrollpanel and swingengine for execution of the plugin		
 		private static final long serialVersionUID = 1L;
 		private final SwingEngine se;
@@ -411,258 +439,6 @@ public class MetaboliteInfo extends JPanel implements SelectionListener, Pathway
 			
 		}
 	
-//////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////
-	
-
-//	//Use multithreads
-//	private PvDesktop desktop;
-//
-//	
-//	//Get the name of the metabolite.
-//	public static String GetName(){
-//
-//		String name = "Glucose";
-//		return name; 
-//	}
-//	
-//	//Request InChI string from Cactus
-//	public static String Inchi(){
-//		String inchiInfo = null;
-//		try {
-//		//Set up connection and put InChI key into a string
-//			HttpClient httpclient = new DefaultHttpClient();
-//			HttpGet getInchi = new HttpGet("http://cactus.nci.nih.gov/chemical/structure/" + GetName() + "/stdinchi");
-//			
-//			HttpResponse response = null;
-//			response = httpclient.execute(getInchi);
-//			
-//			HttpEntity entity = response.getEntity();
-//			inchiInfo = EntityUtils.toString(entity);
-//		
-//		} catch (ClientProtocolException ClientException) {
-//			System.out.println(ClientException.getMessage());
-//			ClientException.printStackTrace();
-//		} catch (IOException IoException) {
-//			System.out.println(IoException.getMessage());
-//			IoException.printStackTrace();
-//		} catch (Throwable throwable) {
-//			  System.out.println(throwable.getMessage());
-//			  throwable.printStackTrace();
-//		}
-//		return inchiInfo;
-//		}
-//	
-//	//Request InChI string from Cactus
-//	public static String InchiKey(){
-//		String inchiKeyInfo = null;
-//		try {
-//		//Set up connection and put InChI key into a string
-//			HttpClient httpclient = new DefaultHttpClient();
-//			HttpGet getInchiKey = new HttpGet("http://cactus.nci.nih.gov/chemical/structure/" + GetName() + "/stdinchikey");
-//			
-//			HttpResponse response = null;
-//			response = httpclient.execute(getInchiKey);
-//			
-//			HttpEntity entity = response.getEntity();
-//			inchiKeyInfo = EntityUtils.toString(entity);
-//		
-//		} catch (ClientProtocolException ClientException) {
-//			System.out.println(ClientException.getMessage());
-//			ClientException.printStackTrace();
-//		} catch (IOException IoException) {
-//			System.out.println(IoException.getMessage());
-//			IoException.printStackTrace();
-//		} catch (Throwable throwable) {
-//			  System.out.println(throwable.getMessage());
-//			  throwable.printStackTrace();
-//		}
-//		return inchiKeyInfo;
-//	}
-//	
-//	public static String Pubchem(){
-//		String cid = "5793";
-//		String pubChemInchi = null;
-//		try {
-//		
-//		HttpClient httpclient = new DefaultHttpClient();
-//		HttpGet pubChemRequest = new HttpGet("http://pubchem.ncbi.nlm.nih.gov/summary/summary.cgi?cid="
-//				+ cid + "&disopt=SaveXML");
-//		pubChemRequest.getAllHeaders();
-//		System.out.println(pubChemRequest);
-//
-//		HttpResponse response = null;
-//		response = httpclient.execute(pubChemRequest);
-//		HttpEntity entity = response.getEntity();
-//		pubChemInchi = EntityUtils.toString(entity);
-//		System.out.println(pubChemInchi);
-//		
-//	} catch (ClientProtocolException ClientException) {
-//		System.out.println(ClientException.getMessage());
-//		ClientException.printStackTrace();
-//	} catch (IOException IoException) {
-//		System.out.println(IoException.getMessage());
-//		IoException.printStackTrace();
-//	} catch (Throwable throwable) {
-//		  System.out.println(throwable.getMessage());
-//		  throwable.printStackTrace();
-//	}
-//		return pubChemInchi;
-//		
-//	}
-//	
-	
-	
-
-//	
-//	public String h1NMR(){
-//		String H1NMR = null;
-//
-//		try {
-//		//Set up connection and put InChI key into a string
-//			HttpClient httpclient = new DefaultHttpClient();
-//			HttpGet getH1NMR = new HttpGet("http://www.hmdb.ca/labm/metabolites/"
-//			+ HMDB + "/chemical/pred_hnmr_peaklist/" + HMDB + "_peaks.txt");
-//			
-//			HttpResponse response = null;
-//			response = httpclient.execute(getH1NMR);
-//			
-//			HttpEntity entity = response.getEntity();
-//			H1NMR = EntityUtils.toString(entity);
-//		
-//		} catch (ClientProtocolException ClientException) {
-//			System.out.println(ClientException.getMessage());
-//			ClientException.printStackTrace();
-//		} catch (IOException IoException) {
-//			System.out.println(IoException.getMessage());
-//			IoException.printStackTrace();
-//		} catch (Throwable throwable) {
-//			  System.out.println(throwable.getMessage());
-//			  throwable.printStackTrace();
-//		}
-//		return H1NMR;
-//		
-//	}
-//	
-//	public String c13NMR(){
-//		String C13NMR = null;
-//		try {
-//		//Set up connection and put InChI key into a string
-//			HttpClient httpclient = new DefaultHttpClient();
-//			HttpGet getC13NMR = new HttpGet("http://www.hmdb.ca/labm/metabolites/"
-//			+ HMDB + "/chemical/pred_cnmr_peaklist/" + HMDB + "_peaks.txt");
-//			
-//			HttpResponse response = null;
-//			response = httpclient.execute(getC13NMR);
-//			
-//			HttpEntity entity = response.getEntity();
-//			C13NMR = EntityUtils.toString(entity);
-//		
-//		} catch (ClientProtocolException ClientException) {
-//			System.out.println(ClientException.getMessage());
-//			ClientException.printStackTrace();
-//		} catch (IOException IoException) {
-//			System.out.println(IoException.getMessage());
-//			IoException.printStackTrace();
-//		} catch (Throwable throwable) {
-//			  System.out.println(throwable.getMessage());
-//			  throwable.printStackTrace();
-//		}
-//		return C13NMR;
-//	}
-//	//Request structure image from Cactus
-//	public Image moleculeImage(){
-//		URL imageUrl = null;
-//		try {
-//			imageUrl = new URL("http://cactus.nci.nih.gov/chemical/structure/" + GetName() + "/image");
-//		} catch (MalformedURLException e) {
-//			e.printStackTrace();
-//		}
-//		
-//		Image image = Toolkit.getDefaultToolkit().createImage(imageUrl);
-//
-//		return image;
-//	}
-//
-//	public Component GeneralPanel(){
-//
-//		String name = "Metabolite name: " + GetName() + "\n \n";
-//		String inchiKey = InchiKey();
-//		String inchi = Inchi() + "\n \n";
-//		//String pubchem = Pubchem();
-//		String info = name + inchi + inchiKey;
-//
-//		JLabel image = new JLabel(new ImageIcon(moleculeImage()));
-//		
-//		JTextArea area = new JTextArea(info);
-//		area.setEditable(false); 
-//		area.setLineWrap(true); 
-//		area.setWrapStyleWord(true); 
-//		
-//		//Create panel for general information about the metabolite.
-//		JPanel GeneralPanel = new JPanel();
-//		GeneralPanel.setBackground(Color.WHITE);
-//		GeneralPanel.setBorder(BorderFactory.createLineBorder(Color.BLACK));
-//		GeneralPanel.setLayout(new BoxLayout(GeneralPanel, BoxLayout.Y_AXIS));
-//		
-//		GeneralPanel.add(area);
-//		GeneralPanel.add(image);
-//		System.out.println("hello");
-//		
-//		return GeneralPanel;
-//	}
-//	
-//	public Component MSPanel(){
-//
-//		//Create panel for MS data/information
-//		JPanel MSPanel = new JPanel();
-//		MSPanel.add(new JLabel("MS info")); //TODO instead of labels, implement MS data
-//		MSPanel.setBorder(BorderFactory.createLineBorder(Color.RED));
-//		MSPanel.setLayout(new BoxLayout(MSPanel, BoxLayout.Y_AXIS));
-//		MSPanel.add(new JLabel(new ImageIcon(MSImageLow())));
-//		MSPanel.add(new JLabel(new ImageIcon(MSImageMed())));
-//		MSPanel.add(new JLabel(new ImageIcon(MSImageHigh())));
-//		
-//		return MSPanel;
-//	}
-	
-//	public Component NMRPanel(){
-//		
-//		//Create panel for NMR data/information
-//		JPanel NMRPanel = new JPanel();
-//		NMRPanel.add(new JLabel("NMR info")); //TODO instead of labels, implement NMR data
-//		NMRPanel.setLayout(new BoxLayout(NMRPanel, BoxLayout.Y_AXIS));
-//		NMRPanel.setBorder(BorderFactory.createLineBorder(Color.BLUE));
-//		
-//		JTextArea C13NMR = new JTextArea(c13NMR());
-//			C13NMR.setEditable(false);
-//			C13NMR.setLineWrap(true); 
-//			C13NMR.setWrapStyleWord(true);
-//		
-//		JTextArea H1NMR = new JTextArea(h1NMR());
-//			H1NMR.setEditable(false);
-//			H1NMR.setLineWrap(true); 
-//			H1NMR.setWrapStyleWord(true);
-//			
-//		NMRPanel.add(C13NMR);
-//		NMRPanel.add(H1NMR);
-//		return NMRPanel;
-//	}
-//	
-//	
-//	
-//	
-//	private boolean disposed = false;
-//	public void dispose()
-//	{
-//		assert (!disposed);
-//		engine.removeApplicationEventListener(this);
-//		VPathway vpwy = engine.getActiveVPathway();
-//		if (vpwy != null) vpwy.removeSelectionListener(this);
-//		executor.shutdown();
-//		disposed = true;
-//	}
 
 	public void done() {}
 
