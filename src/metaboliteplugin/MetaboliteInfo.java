@@ -8,6 +8,8 @@ import java.awt.AlphaComposite;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Graphics2D;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Image;
 import java.awt.Toolkit;
@@ -254,10 +256,11 @@ public class MetaboliteInfo extends JPanel implements SelectionListener, Pathway
 			HttpResponse rInchi = null;
 			HttpResponse rInchiKey = null;
 			
+			//Create TextArea
 			JTextArea generalKey = new JTextArea();
 			generalKey.setEditable(false);
 			generalKey.setLineWrap(true);
-			generalKey.setWrapStyleWord(false);
+			generalKey.setWrapStyleWord(true);
 			
 			//HMDB ID
 			HMDBid = setHMDB(HMDB);
@@ -315,11 +318,13 @@ public class MetaboliteInfo extends JPanel implements SelectionListener, Pathway
 			URL imageUrl = null;
 			try {
 				imageUrl = new URL("http://cactus.nci.nih.gov/chemical/structure/" + setSMILES(SMILES) + "/image");
-				Image image = Toolkit.getDefaultToolkit().createImage(imageUrl);
-				
+				Image image = ImageIO.read(imageUrl);
+			
 				panel.add(new JLabel(new ImageIcon(image)));
 				
 			} catch (MalformedURLException e) {
+				panel.add(new JLabel("Image could not be loaded. Please try again later"));
+			} catch (IOException e) {
 				panel.add(new JLabel("Image could not be loaded. Please try again later"));
 			}
 			
@@ -425,6 +430,10 @@ public class MetaboliteInfo extends JPanel implements SelectionListener, Pathway
 			} catch (Throwable throwable) {
 				HC.setText("Peak lists could not be loaded. Please try again later");
 			}
+			
+			
+			
+			
 			panel.add(HC);
 		}
 		
@@ -451,9 +460,9 @@ public class MetaboliteInfo extends JPanel implements SelectionListener, Pathway
 			panel = new JPanel();
 			panel.setLayout(new GridLayout(0,1));
 			panel.setBackground(Color.white);
-			
+		
 			scroll = new JScrollPane(panel);
-			add (scroll, BorderLayout.CENTER);			 
+			add (scroll);			 
 			
 		}
 		
