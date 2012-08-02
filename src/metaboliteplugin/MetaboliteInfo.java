@@ -60,6 +60,7 @@ public class MetaboliteInfo extends JPanel implements SelectionListener, Pathway
 {
 
 	public static final String TITLE = "Metabolite";
+	String test = "test";
 		
 		private Engine engine;
 		private ExecutorService executor;
