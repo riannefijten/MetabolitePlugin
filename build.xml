@@ -17,6 +17,8 @@
 			<include name="org.bridgedb.bio.jar"/>
 			<include name="com.springsource.org.apache.commons.logging-1.1.1.jar"/>
 			<include name="commons-codec-1.5.jar"/>
+			<include name="org.bridgedb.jar"/>
+				<include name="org.bridgedb.bio.jar"/>
 		</fileset>
 		<fileset dir="lib">
 			<include name="cdk-1.4.9.jar"/>
