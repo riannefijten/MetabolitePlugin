@@ -20,13 +20,18 @@ import java.net.URL;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import javax.imageio.ImageIO;
 import javax.swing.ImageIcon;
+import javax.swing.JEditorPane;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
+import javax.swing.SwingUtilities;
+import javax.swing.text.html.HTMLEditorKit;
+import javax.swing.text.html.HTMLEditorKit.Parser;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -56,21 +61,55 @@ import org.pathvisio.core.view.VPathway;
 import org.pathvisio.core.view.VPathwayElement;
 import org.pathvisio.gui.SwingEngine;
 
-public class MetaboliteInfo extends JPanel implements SelectionListener, PathwayElementListener, ApplicationEventListener
+public class MetaboliteInfo extends JEditorPane implements SelectionListener, PathwayElementListener, ApplicationEventListener
 {
 
 	public static final String TITLE = "Metabolite";
-	String test = "test";
 		
 		private Engine engine;
 		private ExecutorService executor;
 	
 		PathwayElement input;
+		
 		final static int maxThreads = 1;
 		volatile ThreadGroup threads;
 		volatile Thread lastThread;
 		
 		private GdbManager gdbManager;
+		
+				//Make panel, scrollpanel and swingengine for execution of the plugin		
+		private final SwingEngine se;
+
+		public MetaboliteInfo(SwingEngine se)
+		{
+			super();
+			Engine engine = se.getEngine();
+			engine.addApplicationEventListener(this);
+			VPathway vp = engine.getActiveVPathway();
+			if(vp != null) vp.addSelectionListener(this);
+			
+			this.se = se;
+			
+			setEditable(false);
+			setContentType("text/html");
+
+			executor = Executors.newSingleThreadExecutor();
+
+			//Workaround for #1313
+			//Cause is java bug: http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=6993691
+			setEditorKit(new HTMLEditorKit() {
+				protected Parser getParser() {
+					try {
+						Class c = Class
+								.forName("javax.swing.text.html.parser.ParserDelegator");
+						Parser defaultParser = (Parser) c.newInstance();
+						return defaultParser;
+					} catch (Throwable e) {
+					}
+					return null;
+				}
+			});
+		}
 		
 		public void setInput(final PathwayElement e) 
 		{
@@ -92,26 +131,26 @@ public class MetaboliteInfo extends JPanel implements SelectionListener, Pathway
 
 		private void doQuery() 
 		{
-			
+			setText("Loading");
 			currRef = input.getXref();
 			
-			//System.err.println("\tSetting input " + e + " using " + threads);
-			//First check if the number of running threads is not too high
-			//(may happen when many SelectionEvent follow very fast)
+			executor.execute(new Runnable()
+			{
+				public void run()
+				{
+					if(input == null) return;
+					final String txt = "xref: " + getID(input);
 
-			if(threads == null || threads.isDestroyed()) {
-				threads = new ThreadGroup("backpage-queries" + System.currentTimeMillis());
-			}
-			if(threads.activeCount() < maxThreads) {
-					QueryThread qt = new QueryThread(input);
-					qt.start();
-					lastThread = qt;		
-			} else {
-
-				//When we're on our maximum, remember this element
-				//and ignore it when a new one is selected
-			}
-
+					SwingUtilities.invokeLater(new Runnable()
+					{
+						public void run()
+						{
+							setText(txt);
+							setCaretPosition(0); // scroll to top.
+						}
+					});
+				}
+			});
 		}
 			
 		public void selectionEvent(SelectionEvent e) 
@@ -155,65 +194,71 @@ public class MetaboliteInfo extends JPanel implements SelectionListener, Pathway
 			}
 		}
 			
-		class QueryThread extends Thread {
-			PathwayElement e;
-			QueryThread(PathwayElement e) {
-				super(threads, e.getGeneID() + e.hashCode());
-				this.e = e;
-			}
-			public void run() {
-				
-				performTask();
-				Info();
-				moleculeImage();
-				MSimages();
-				NMRTables();
-				
-				if(this.equals(lastThread) && input != e) {
-
-					e = input;
-					
-					performTask();
-					Info();
-					moleculeImage();
-					MSimages();		
-					NMRTables();
-					
-					lastThread = null;
-				}
-
-			}
-			void performTask() 
-			{
-				// return unless we have a valid datanode.
-				if (e == null) return;
-				if (e.getObjectType() != ObjectType.DATANODE) return;
-				Xref ref = e.getXref();
-				IDMapper gdb = gdbManager.getCurrentGdb();
-				try
-				{
-					Set<Xref> destrefs = gdb.mapID(ref, BioDataSource.HMDB);
-					if (destrefs.size() > 0)
-					{
-						String HMDB = ref.getId();
-						String smiles = Utils.oneOf (
-								gdbManager.getCurrentGdb().getAttributes (Utils.oneOf(destrefs), "SMILES"));
-						String bruto = Utils.oneOf (
-								gdbManager.getCurrentGdb().getAttributes (Utils.oneOf(destrefs), "BrutoFormula"));
-						String name = Utils.oneOf (
-								gdbManager.getCurrentGdb().getAttributes (Utils.oneOf(destrefs), "Symbol"));
-						if(input == e) {setHMDB(HMDB); setSMILES(smiles); setBruto(bruto); setSymbol(name);}
-					}
-				}
-				catch (IDMapperException e)
-				{
-					Logger.log.error ("while getting cross refs", e);
-				}
-				
-			}
-		}
+//		class QueryThread extends Thread {
+//			PathwayElement e;
+//			QueryThread(PathwayElement e) {
+//				super(threads, e.getGeneID() + e.hashCode());
+//				this.e = e;
+//			}
+//			public void run() {
+//				setText("blabla");
+//				
+//				performTask();
+//				Info();
+//				moleculeImage();
+//				MSimages();
+//				NMRTables();
+//				
+//				if(this.equals(lastThread) && input != e) {
+//
+//					e = input;
+//					setText("blublu");
+//					
+//					performTask();
+//					Info();
+//					moleculeImage();
+//					MSimages();		
+//					NMRTables();
+//					
+//					lastThread = null;
+//				}
+//
+//			}
+//			void performTask() 
+//			{
+//				// return unless we have a valid datanode.
+//				if (e == null) return;
+//				if (e.getObjectType() != ObjectType.DATANODE) return;
+//				Xref ref = e.getXref();
+//				IDMapper gdb = gdbManager.getCurrentGdb();
+//				try
+//				{
+//					Set<Xref> destrefs = gdb.mapID(ref, BioDataSource.HMDB);
+//					if (destrefs.size() > 0)
+//					{
+//						String HMDB = ref.getId();
+//						String smiles = Utils.oneOf (
+//								gdbManager.getCurrentGdb().getAttributes (Utils.oneOf(destrefs), "SMILES"));
+//						String bruto = Utils.oneOf (
+//								gdbManager.getCurrentGdb().getAttributes (Utils.oneOf(destrefs), "BrutoFormula"));
+//						String name = Utils.oneOf (
+//								gdbManager.getCurrentGdb().getAttributes (Utils.oneOf(destrefs), "Symbol"));
+//						if(input == e) {setHMDB(HMDB); setSMILES(smiles); setBruto(bruto); setSymbol(name);}
+//					}
+//				}
+//				catch (IDMapperException e)
+//				{
+//					Logger.log.error ("while getting cross refs", e);
+//				}
+//				
+//			}
+//		}
 		
-		
+	public String getID(PathwayElement e){
+		String xref = e.getXref().getId();
+		System.out.println(xref);
+		return xref;
+	}
 // Strings that will contain info such as HMDB ID and SMILES		
 		String HMDB;
 		String SMILES;
@@ -245,7 +290,7 @@ public class MetaboliteInfo extends JPanel implements SelectionListener, Pathway
 //Set info for metabolite
 		public void Info(){
 			
-			panel.removeAll();
+//			panel.removeAll();
 
 			String inchi = null;
 			String inchiKey= null;
@@ -311,7 +356,7 @@ public class MetaboliteInfo extends JPanel implements SelectionListener, Pathway
 			} catch (Throwable throwable) {
 				generalKey.setText("Inchi IDs could not be loaded. Please try again later");
 			}
-			panel.add(generalKey);
+//			panel.add(generalKey);
 		}
 		
 //Request structure image from Cactus
@@ -321,12 +366,12 @@ public class MetaboliteInfo extends JPanel implements SelectionListener, Pathway
 				imageUrl = new URL("http://cactus.nci.nih.gov/chemical/structure/" + setSMILES(SMILES) + "/image");
 				Image image = ImageIO.read(imageUrl);
 			
-				panel.add(new JLabel(new ImageIcon(image)));
+//				panel.add(new JLabel(new ImageIcon(image)));
 				
 			} catch (MalformedURLException e) {
-				panel.add(new JLabel("Image could not be loaded. Please try again later"));
+//				panel.add(new JLabel("Image could not be loaded. Please try again later"));
 			} catch (IOException e) {
-				panel.add(new JLabel("Image could not be loaded. Please try again later"));
+//				panel.add(new JLabel("Image could not be loaded. Please try again later"));
 			}
 			
 		}
@@ -347,7 +392,7 @@ public class MetaboliteInfo extends JPanel implements SelectionListener, Pathway
 				imageUrlMed = new URL("http://www.hmdb.ca/labm/metabolites/" + setHMDB(HMDB) + "/ms/spectraM/" + setHMDB(HMDB) + "M.png");
 				imageUrlHigh = new URL("http://www.hmdb.ca/labm/metabolites/" + setHMDB(HMDB) + "/ms/spectraH/" + setHMDB(HMDB) + "H.png");
 			} catch (MalformedURLException e) {
-				panel.add(new JLabel("Images could not be loaded. Please try again later"));
+//				panel.add(new JLabel("Images could not be loaded. Please try again later"));
 			}
 		//Read image from url
 			try {
@@ -361,7 +406,7 @@ public class MetaboliteInfo extends JPanel implements SelectionListener, Pathway
 		        gLow.drawImage(imageLow, 0, 0, 400, 500, null);
 		        gLow.dispose();
 		        
-		        panel.add(new JLabel(new ImageIcon(bufferedImageLow)));
+//		        panel.add(new JLabel(new ImageIcon(bufferedImageLow)));
 		        
 		    //Medium energy image		        
 		        imageMed = ImageIO.read(imageUrlMed);
@@ -373,7 +418,7 @@ public class MetaboliteInfo extends JPanel implements SelectionListener, Pathway
 		        gMed.drawImage(imageLow, 0, 0, 400, 500, null);
 		        gMed.dispose();
 		        
-		        panel.add(new JLabel(new ImageIcon(bufferedImageMed)));
+//		        panel.add(new JLabel(new ImageIcon(bufferedImageMed)));
 		        
 		    //High energy image
 		        imageHigh = ImageIO.read(imageUrlHigh);
@@ -385,10 +430,10 @@ public class MetaboliteInfo extends JPanel implements SelectionListener, Pathway
 		        gHigh.drawImage(imageLow, 0, 0, 400, 500, null);
 		        gHigh.dispose();
 		        
-		        panel.add(new JLabel(new ImageIcon(bufferedImageHigh)));
+//		        panel.add(new JLabel(new ImageIcon(bufferedImageHigh)));
 					
 			} catch (IOException e) {
-				panel.add(new JLabel("Images could not be loaded. Please try again later"));
+//				panel.add(new JLabel("Images could not be loaded. Please try again later"));
 			}
 		
 		}
@@ -432,40 +477,10 @@ public class MetaboliteInfo extends JPanel implements SelectionListener, Pathway
 				HC.setText("Peak lists could not be loaded. Please try again later");
 			}
 			
-			
-			
-			
-			panel.add(HC);
+//			panel.add(HC);
 		}
 		
-	
-//Make panel, scrollpanel and swingengine for execution of the plugin		
-		private static final long serialVersionUID = 1L;
-		private final SwingEngine se;
-		private final JPanel panel;	
-		private final JScrollPane scroll;
-		
-		public MetaboliteInfo(SwingEngine se)
-		{
-			super();
-			Engine engine = se.getEngine();
-			engine.addApplicationEventListener(this);
-			VPathway vp = engine.getActiveVPathway();
-			if(vp != null) vp.addSelectionListener(this);
-			
-			this.gdbManager = se.getGdbManager();
-			this.se = se;
-			
-			setLayout (new BorderLayout());
-			
-			panel = new JPanel();
-			panel.setLayout(new GridLayout(0,1));
-			panel.setBackground(Color.white);
-		
-			scroll = new JScrollPane(panel);
-			add (scroll);			 
-			
-		}
+
 		
 		private boolean disposed = false;
 		public void dispose()
