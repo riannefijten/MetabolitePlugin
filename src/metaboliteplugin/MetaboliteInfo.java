@@ -14,7 +14,10 @@ import java.awt.GridLayout;
 import java.awt.Image;
 import java.awt.Toolkit;
 import java.awt.image.BufferedImage;
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.HashMap;
@@ -34,6 +37,7 @@ import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
 import javax.swing.text.StyledEditorKit;
 import javax.swing.text.html.HTMLEditorKit;
+import javax.swing.text.html.ImageView;
 import javax.swing.text.html.HTMLEditorKit.Parser;
 
 import org.apache.http.HttpEntity;
@@ -54,6 +58,7 @@ import org.pathvisio.core.Engine;
 import org.pathvisio.core.Engine.ApplicationEventListener;
 import org.pathvisio.core.data.GdbManager;
 import org.pathvisio.core.debug.Logger;
+import org.pathvisio.core.model.DataNodeType;
 import org.pathvisio.core.model.ObjectType;
 import org.pathvisio.core.model.PathwayElement;
 import org.pathvisio.core.model.PathwayElementEvent;
@@ -69,430 +74,352 @@ import org.pathvisio.gui.SwingEngine;
 public class MetaboliteInfo extends JEditorPane implements SelectionListener, PathwayElementListener, ApplicationEventListener
 {
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////PLUGIN WORKING MECHANISM/////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	
 	public static final String TITLE = "Metabolite";
 		
-		private Engine engine;
-		private ExecutorService executor;
+	private Engine engine;
+	private ExecutorService executor;
+
+	PathwayElement input;
 	
-		PathwayElement input;
-		
-		final static int maxThreads = 1;
-		volatile ThreadGroup threads;
-		volatile Thread lastThread;
-		
-		private GdbManager gdbManager;
-		
-				//Make panel, scrollpanel and swingengine for execution of the plugin		
-		private final SwingEngine se;
+	final static int maxThreads = 1;
+	volatile ThreadGroup threads;
+	volatile Thread lastThread;
+	
+	private GdbManager gdbManager;
+	private final SwingEngine se;
 
-		public MetaboliteInfo(SwingEngine se)
-		{
+	public MetaboliteInfo(SwingEngine se)
+	{
 //			super();
-			Engine engine = se.getEngine();
-			engine.addApplicationEventListener(this);
-			VPathway vp = engine.getActiveVPathway();
-			if(vp != null) vp.addSelectionListener(this);
-			this.se = se;
-			this.gdbManager = se.getGdbManager();
-			
-			setEditable(false);
-			setContentType("text/html");
+		Engine engine = se.getEngine();
+		engine.addApplicationEventListener(this);
+		VPathway vp = engine.getActiveVPathway();
+		if(vp != null) vp.addSelectionListener(this);
+		this.se = se;
+		this.gdbManager = se.getGdbManager();
 		
-			executor = Executors.newSingleThreadExecutor();
+		addHyperlinkListener(se);
+		setEditable(false);
+		setContentType("text/html");
+	
+		executor = Executors.newSingleThreadExecutor();
 
-			//Workaround for #1313
-			//Cause is java bug: http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=6993691
-			setEditorKit(new HTMLEditorKit() {
-				protected Parser getParser() {
-					try {
-						Class c = Class
-								.forName("javax.swing.text.html.parser.ParserDelegator");
-						Parser defaultParser = (Parser) c.newInstance();
-						return defaultParser;
-					} catch (Throwable e) {
-					}
-					return null;
+		//Workaround for #1313
+		//Cause is java bug: http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=6993691
+		setEditorKit(new HTMLEditorKit() {
+			protected Parser getParser() {
+				try {
+					Class c = Class
+							.forName("javax.swing.text.html.parser.ParserDelegator");
+					Parser defaultParser = (Parser) c.newInstance();
+					return defaultParser;
+				} catch (Throwable e) {
 				}
-			});
-		}
-		
-		public void setInput(final PathwayElement e) 
-		{
-			//System.err.println("===== SetInput Called ==== " + e);
-			
-			if(e == input) return; //Don't set same input twice
-			
-			//Remove pathwaylistener from old input
-			if(input != null) input.removeListener(this);
-			
-			if(e == null || e.getObjectType() != ObjectType.DATANODE) {
-				input = null;
-			} else {
-				input = e;
-				input.addListener(this);
-				doQuery();
+				return null;
 			}
-		}
-
-		private void doQuery() 
-		{
-			setText("Loading");
-			currRef = input.getXref();
-			
-			executor.execute(new Runnable()
-			{
-				public void run()
-				{
-					if(input == null) return;
-					final String txt = "<p>" + getID(input);
-
-					SwingUtilities.invokeLater(new Runnable()
-					{
-						public void run()
-						{
-							setText(txt);
-							setCaretPosition(0); // scroll to top.
-						}
-					});
-				}
-			});
-		}
-			
-		public void selectionEvent(SelectionEvent e) 
-		{
-			switch(e.type) {
-			case SelectionEvent.OBJECT_ADDED:
-				//Just take the first DataNode in the selection
-				Iterator<VPathwayElement> it = e.selection.iterator();
-				while(it.hasNext()) {
-					VPathwayElement o = it.next();
-					if(o instanceof GeneProduct) {
-						setInput(((GeneProduct)o).getPathwayElement());
-						break;
-					}
-				}
-				break;
-			case SelectionEvent.OBJECT_REMOVED:
-				if(e.selection.size() != 0) break;
-			case SelectionEvent.SELECTION_CLEARED:
-				setInput(null);
-				break;
-			}
-		}
-
-		public void applicationEvent(ApplicationEvent e) {
-			if(e.getType() == ApplicationEvent.Type.VPATHWAY_CREATED) {
-				((VPathway)e.getSource()).addSelectionListener(this);
-			}
-		}
-			
-		Xref currRef;
-		
-		public void gmmlObjectModified(PathwayElementEvent e) {
-			PathwayElement pe = e.getModifiedPathwayElement();
-			if(input != null) {
-				Xref nref = new Xref (pe.getGeneID(), input.getDataSource());
-				if(!nref.equals(currRef)) 
-				{
-					doQuery();
-				}				
-			}
-		}
-			
-
-//			void performTask() 
-//			{
-//				// return unless we have a valid datanode.
-//				if (e == null) return;
-//				if (e.getObjectType() != ObjectType.DATANODE) return;
-//				Xref ref = e.getXref();
-//				IDMapper gdb = gdbManager.getCurrentGdb();
-//				try
-//				{
-//					Set<Xref> destrefs = gdb.mapID(ref, BioDataSource.HMDB);
-//					if (destrefs.size() > 0)
-//					{
-//						String HMDB = ref.getId();
-//						String smiles = Utils.oneOf (
-//								gdbManager.getCurrentGdb().getAttributes (Utils.oneOf(destrefs), "SMILES"));
-//						String bruto = Utils.oneOf (
-//								gdbManager.getCurrentGdb().getAttributes (Utils.oneOf(destrefs), "BrutoFormula"));
-//						String name = Utils.oneOf (
-//								gdbManager.getCurrentGdb().getAttributes (Utils.oneOf(destrefs), "Symbol"));
-//						if(input == e) {setHMDB(HMDB); setSMILES(smiles); setBruto(bruto); setSymbol(name);}
-//					}
-//				}
-//				catch (IDMapperException e)
-//				{
-//					Logger.log.error ("while getting cross refs", e);
-//				}
-//				
-//			}
-//		}
-		
-	public String getID(PathwayElement e){
-		
-		String HMDB = null;
-		String smiles = null;
-		StringBuilder builder = new StringBuilder();
-		String xref = e.getXref().getId();
-		
-		
-		Xref ref = e.getXref();
-		IDMapper gdb = gdbManager.getCurrentGdb();
-		//TODO explain why nothing is shown when no database is selected.
-		try
-		{
-			Set<Xref> destrefs = gdb.mapID(ref, BioDataSource.HMDB);
-			if (destrefs.size() > 0)
-			{
-				HMDB = ref.getId(); //TODO assuming that the given id is an HMDB id
-				smiles = Utils.oneOf (
-						gdbManager.getCurrentGdb().getAttributes (Utils.oneOf(destrefs), "SMILES"));
-				String bruto = Utils.oneOf (
-						gdbManager.getCurrentGdb().getAttributes (Utils.oneOf(destrefs), "BrutoFormula"));
-				String name = Utils.oneOf (
-						gdbManager.getCurrentGdb().getAttributes (Utils.oneOf(destrefs), "Symbol"));
-				if(input == e) {
-					builder.append("Name: " + name + "<br />");
-					builder.append("ID: " + xref + "<br />");
-					builder.append("SMILES: " + smiles + "<br />");
-					builder.append("Molecular formula: " + bruto + "<br />");
-				}
-			}
-		}
-		catch (IDMapperException ex)
-		{
-			Logger.log.error ("while getting cross refs", ex);
-			System.out.println("IDMapperException");
-		}
-		
-		builder.append("<br /><br /><br />");
-		//MS images
-		String urlLow = "http://www.hmdb.ca/labm/metabolites/" + HMDB + "/ms/spectra/" + HMDB + "L.png";
-		String urlMed = "http://www.hmdb.ca/labm/metabolites/" + HMDB + "/ms/spectraM/" + HMDB + "M.png";
-		String urlHigh = "http://www.hmdb.ca/labm/metabolites/" + HMDB + "/ms/spectraH/" + HMDB + "H.png";
-
-		builder.append("<a href=\"" + urlLow + "\">" + "low energy MS image" + "</a><br />");
-		builder.append("<a href=\"" + urlMed + "\">" + "medium energy MS image" + "</a><br />");
-		builder.append("<a href=\"" + urlHigh + "\">" + "high energy MS image" + "</a><br />");
-		
-		builder.append("<br /><br /><br />");
-		//Molecule image
-		String imageUrl = null;
-		imageUrl = "http://cactus.nci.nih.gov/chemical/structure/" + smiles + "/image";
-		builder.append("<img src=" + imageUrl + "alt=\"molecule image\"/>");
-		
-		
-//		//NMR tables
-//		
-//		//String NMRurl1 = "http://www.hmdb.ca/labm/metabolites/" + HMDB + "/chemical/pred_hnmr_peaklist/" + HMDB + "_peaks.txt";
-//			//Set up connection
-//		HttpClient httpclient = new DefaultHttpClient();
-//		
-//		HttpGet getHNMR = new HttpGet("http://www.hmdb.ca/labm/metabolites/" + HMDB + "/chemical/pred_hnmr_peaklist/" + HMDB + "_peaks.txt");
-//		HttpGet getCNMR = new HttpGet("http://www.hmdb.ca/labm/metabolites/" + HMDB + "/chemical/pred_cnmr_peaklist/" + HMDB + "_peaks.txt");
-//		HttpResponse responseH = null; HttpResponse responseC = null;
-//		try {
-//			responseH = httpclient.execute(getHNMR);
-//			responseC = httpclient.execute(getCNMR);
-//		} catch (ClientProtocolException e1) {
-//			e1.printStackTrace();
-//		} catch (IOException e1) {
-//			e1.printStackTrace();
-//		}
-//		
-//		//Generate peak lists
-//		HttpEntity entityH = responseH.getEntity();
-//		HttpEntity entityC = responseH.getEntity();
-//		
-//		String HNMR = null; String CNMR = null;
-//		try {
-//			HNMR = EntityUtils.toString(entityH);
-//			CNMR = EntityUtils.toString(entityC);
-//		} catch (ParseException e1) {
-//			e1.printStackTrace();
-//		} catch (IOException e1) {
-//			e1.printStackTrace();
-//		}
-//		System.out.println("CNMR: " + CNMR);
-//		System.out.println("HNMR: " + HNMR);
-//		//Set peak lists to textarea
-//		builder.append(CNMR + "<br />" + HNMR);
-		
-		
-		String HNMR = null;
-		String CNMR = null;
-		HttpResponse responseH = null;
-		HttpResponse responseC = null;
-			
-		JTextArea HC = new JTextArea();
-		HC.setEditable(false);
-		HC.setLineWrap(true);
-		HC.setWrapStyleWord(false);
-		
-	//Set up connection
-			HttpClient httpclient = new DefaultHttpClient();
-
-//			"http://www.hmdb.ca/labm/metabolites/" + HMDB + "/chemical/pred_hnmr_peaklist/" + HMDB + "_peaks.txt";
-			HttpGet getHNMR = new HttpGet("http://www.hmdb.ca/labm/metabolites/" + HMDB + "/chemical/pred_hnmr_peaklist/" + HMDB + "_peaks.txt");
-			HttpGet getCNMR = new HttpGet("http://www.hmdb.ca/labm/metabolites/" + HMDB + "/chemical/pred_cnmr_peaklist/" + HMDB + "_peaks.txt");
-			
-			try {
-				responseH = httpclient.execute(getHNMR);
-				responseC = httpclient.execute(getCNMR);
-			} catch (ClientProtocolException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
-				System.out.println("client exception");
-			} catch (IOException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
-				System.out.println("ioexception");
-			}
-			
-			System.out.println("<br />responses: " + responseH + responseC);
-			
-		//Generate HNMR peak list
-			HttpEntity entityH = responseH.getEntity();
-			HttpEntity entityC = responseH.getEntity();;
-			try {
-				HNMR = EntityUtils.toString(entityH);
-				CNMR = EntityUtils.toString(entityC);
-				System.out.println("within try" + HNMR + CNMR);
-			} catch (ParseException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
-				System.out.println("parseexception");
-			} catch (IOException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
-				System.out.println("ioexception");
-			}
-			System.out.println("<br />HNMR inside try: " + HNMR);
-			
-		//Generate CNMR peak list
-			
-			
-			System.out.println("<br />CNMR inside try: " + CNMR);
-		//Set peak lists to textarea
-			HC.setText(CNMR + "\n" + HNMR);
-			System.out.println("<br /> HC inside try"+HC);
-			System.out.println("no exception");
-		
-		System.out.println(HC);
-		System.out.println("CNMR: "+CNMR);
-		System.out.println("HNMR: "+HNMR);
-		
-		builder.append(HC + "<br />");
-		if (CNMR == null){
-			builder.append("CNMR is null");
-		}
-		else {builder.append(CNMR);}
-		builder.append(HNMR);
-		builder.append("</p>");
-		return builder.toString();
+		});
 	}
-// Strings that will contain info such as HMDB ID and SMILES		
-//		String HMDB;
-//		String SMILES;
-//		String bruto;
-//		String symbol;
-//		String description;
+		
+	public void setInput(final PathwayElement e) 
+	{
+		//System.err.println("===== SetInput Called ==== " + e);
+		
+		if(e == input) return; //Don't set same input twice
+		
+		//Remove pathwaylistener from old input
+		if(input != null) input.removeListener(this);
+		
+		if(e == null || e.getObjectType() != ObjectType.DATANODE) {
+			input = null;
+			
+		} 
+		else {
+			input = e;
+			input.addListener(this);
+			doQuery();
+		}
+	}
 
-//		public String setHMDB(String newText) {
-//			HMDB = newText;
-//			System.out.println("HMDB: "+HMDB);
-//			return HMDB;		
-//		}
-//		
-//		public String setBruto(String newText) {
-//			bruto = newText;
-//			return bruto;
-//		}
-//		
-//		public String setSymbol(String newText) {
-//			symbol = newText;
-//			return symbol;
-//		}
-//		
-//		public String setSMILES(String newText) {
-//			SMILES = newText;
-//			return SMILES;
-//		}
-//			
-////Set info for metabolite
-//		public void Info(){
-//			
-////			panel.removeAll();
-//
-//			String inchi = null;
-//			String inchiKey= null;
-//			String name = null;
-//			String smiles = null;
-//			String brutoFormula = null;
-//			String HMDBid = null;
-//			
-//			HttpResponse rInchi = null;
-//			HttpResponse rInchiKey = null;
-//			
-//			//Create TextArea
-//			JTextArea generalKey = new JTextArea();
-//			generalKey.setEditable(false);
-//			generalKey.setLineWrap(true);
-//			generalKey.setWrapStyleWord(true);
-//			
-//			//HMDB ID
-//			HMDBid = setHMDB(HMDB);
-//			
-//			//metabolite name 
-//			name = setSymbol(symbol);
-//						
-//			//SMILES
-//			smiles = setSMILES(SMILES);
-//			
-//			//bruto formula
-//			brutoFormula = setBruto(bruto);
-//			
-//			//Generate inchi's			
-//			try {
-//				//Set up connection
-//				HttpClient httpclient = new DefaultHttpClient();
-//				
-//				HttpGet getInchi = new HttpGet("http://cactus.nci.nih.gov/chemical/structure/" + setSMILES(SMILES) + "/stdinchi");
-//				HttpGet getInchiKey = new HttpGet("http://cactus.nci.nih.gov/chemical/structure/" + setSMILES(SMILES) + "/stdinchikey");
-//			
-//				//Generate Inchi ID
-//				rInchi = httpclient.execute(getInchi);
-//				HttpEntity entityInchi = rInchi.getEntity();
-//				inchi = EntityUtils.toString(entityInchi);
-//		
-//				//Generate InchiKey ID
-//				rInchiKey = httpclient.execute(getInchiKey);
-//				HttpEntity entityInchiKey = rInchiKey.getEntity();
-//				inchiKey = EntityUtils.toString(entityInchiKey);
-//			
-//				//Input info into JTextArea
-//				generalKey.setText(
-//						"HMDB ID: " + HMDBid + "\n"
-//						+ "Name: " + name + "\n" 
-//						+ inchiKey + "\n"
-//						+ inchi + "\n"
-//						+ "SMILES: " + smiles + "\n"
-//						+ "Bruto Formula: " + brutoFormula + "\n"
-//						);
-//				
-//
-//			} catch (ClientProtocolException ClientException) {
-//				generalKey.setText("Inchi IDs could not be loaded. Please try again later");
-//			} catch (IOException IoException) {
-//				generalKey.setText("Inchi IDs could not be loaded. Please try again later");
-//			} catch (Throwable throwable) {
-//				generalKey.setText("Inchi IDs could not be loaded. Please try again later");
-//			}
-////			panel.add(generalKey);
-//		}
-//		
+	private void doQuery() 
+	{
+		setText("Loading");
+		currRef = input.getXref();
+		
+		executor.execute(new Runnable()
+		{
+			public void run()
+			{
+				if(input == null) return;
+				final String txt = getContent(input);
+
+				SwingUtilities.invokeLater(new Runnable()
+				{
+					public void run()
+					{
+						setText(txt);
+						setCaretPosition(0); // scroll to top.
+					}
+				});
+			}
+		});
+	}
+			
+	public void selectionEvent(SelectionEvent e) 
+	{
+		switch(e.type) {
+		case SelectionEvent.OBJECT_ADDED:
+			//Just take the first DataNode in the selection
+			Iterator<VPathwayElement> it = e.selection.iterator();
+			while(it.hasNext()) {
+				VPathwayElement o = it.next();
+				if(o instanceof GeneProduct) {
+					setInput(((GeneProduct)o).getPathwayElement());
+					break;
+				}
+			}
+			break;
+		case SelectionEvent.OBJECT_REMOVED:
+			if(e.selection.size() != 0) break;
+		case SelectionEvent.SELECTION_CLEARED:
+			setInput(null);
+			break;
+		}
+	}
+
+	public void applicationEvent(ApplicationEvent e) {
+		if(e.getType() == ApplicationEvent.Type.VPATHWAY_CREATED) {
+			((VPathway)e.getSource()).addSelectionListener(this);
+		}
+	}
+		
+	Xref currRef;
+	
+	public void gmmlObjectModified(PathwayElementEvent e) {
+		PathwayElement pe = e.getModifiedPathwayElement();
+		if(input != null) {
+			Xref nref = new Xref (pe.getGeneID(), input.getDataSource());
+			if(!nref.equals(currRef)) 
+			{
+				doQuery();
+			}				
+		}
+	}
+		
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////PLUGIN CONTENT////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	
+	public String getContent(PathwayElement e){
+		
+		if (e.getDataNodeType().equals("Metabolite")){
+			System.out.println("metabolite found! eureka!!!");
+			
+			String HMDB = null;
+			String smiles = null;
+			String name = null;
+			StringBuilder builder = new StringBuilder();
+			String xref = e.getXref().getId();
+			
+			Xref ref = e.getXref();
+			IDMapper gdb = gdbManager.getCurrentGdb();
+			//TODO explain why nothing is shown when no database is selected.
+			try
+			{
+				Set<Xref> destrefs = gdb.mapID(ref, BioDataSource.HMDB);
+				if (destrefs.size() > 0)
+				{
+					HMDB = ref.getId(); //TODO assuming that the given id is an HMDB id
+					smiles = Utils.oneOf (
+							gdbManager.getCurrentGdb().getAttributes (Utils.oneOf(destrefs), "SMILES"));
+					String bruto = Utils.oneOf (
+							gdbManager.getCurrentGdb().getAttributes (Utils.oneOf(destrefs), "BrutoFormula"));
+					name = Utils.oneOf (
+							gdbManager.getCurrentGdb().getAttributes (Utils.oneOf(destrefs), "Symbol"));
+					if(input == e) {
+						builder.append("<table border=\"0\"> <th  colspan=\"2\"> General info: </th>");
+						builder.append("<tr><td>Name: </td><td>" + name + "</td></tr>");
+						builder.append("<tr><td>ID: </td><td>" + xref + "</td></tr>");
+						builder.append("<tr><td>Molecular formula: </td><td>" + bruto + "</td></tr>");
+						builder.append("<tr><td>SMILES: </td><td>" + smiles + "</td></tr>");
+					}
+				}
+			}
+			catch (IDMapperException ex)
+			{
+				Logger.log.error ("while getting cross refs", ex);
+				System.out.println("IDMapperException");
+			}
+			
+			//Inchi			
+			String inchi = null;
+			try {
+			//Set up connection and put InChI key into a string
+				HttpClient httpclient = new DefaultHttpClient();
+				HttpGet getInchi = new HttpGet("http://cactus.nci.nih.gov/chemical/structure/"
+				+ smiles + "/stdinchi");
+	
+				HttpResponse response = null;
+				response = httpclient.execute(getInchi);
+	
+				HttpEntity entity = response.getEntity();
+				inchi = EntityUtils.toString(entity);
+	
+			} catch (ClientProtocolException ClientException) {
+				System.out.println(ClientException.getMessage());
+				ClientException.printStackTrace();
+			} catch (IOException IoException) {
+				System.out.println(IoException.getMessage());
+				IoException.printStackTrace();
+			} catch (Throwable throwable) {
+				  System.out.println(throwable.getMessage());
+				  throwable.printStackTrace();
+			}
+			inchi = inchi.replace("InChI=", "");
+			builder.append("<tr><td> Inchi: </td><td>" + inchi + "</td></tr>");
+			//Inchi Key
+			String inchiKey = null;
+			try {
+			//Set up connection and put InChI key into a string
+				HttpClient httpclient = new DefaultHttpClient();
+				HttpGet getInchiKey = new HttpGet("http://cactus.nci.nih.gov/chemical/structure/" 
+						+ smiles + "/stdinchikey");
+	
+				HttpResponse response = null;
+				response = httpclient.execute(getInchiKey);
+	
+				HttpEntity entity = response.getEntity();
+				inchiKey = EntityUtils.toString(entity);
+	
+			} catch (ClientProtocolException ClientException) {
+				System.out.println(ClientException.getMessage());
+				ClientException.printStackTrace();
+			} catch (IOException IoException) {
+				System.out.println(IoException.getMessage());
+				IoException.printStackTrace();
+			} catch (Throwable throwable) {
+				  System.out.println(throwable.getMessage());
+				  throwable.printStackTrace();
+			}
+			inchiKey = inchiKey.replace("InChIKey=", "");
+			builder.append("<tr><td> Inchi Key: </td><td>" + inchiKey + "</td></tr></table>");
+			//MS images
+			String urlLow = "http://www.hmdb.ca/labm/metabolites/" + HMDB + "/ms/spectra/" + HMDB + "L.png";
+			String urlMed = "http://www.hmdb.ca/labm/metabolites/" + HMDB + "/ms/spectraM/" + HMDB + "M.png";
+			String urlHigh = "http://www.hmdb.ca/labm/metabolites/" + HMDB + "/ms/spectraH/" + HMDB + "H.png";
+			
+			
+			builder.append("<br /><h3> Mass spectroscopy images: </h3><p>");
+			builder.append("<a href=\"" + urlLow + "\"> Low energy MS image </a><br />");
+			builder.append("<a href=\"" + urlMed + "\"> Medium energy MS image </a><br />");
+			builder.append("<a href=\"" + urlHigh + "\"> High energy MS image </a><br /></p>");
+	
+			
+			
+			//Molecule image
+			String imageUrl = null;
+			imageUrl = "http://cactus.nci.nih.gov/chemical/structure/" + smiles + "/image";
+			builder.append("<br /><h3> Molecule image: </h3><p>");
+			builder.append("<img src=" + imageUrl + "alt=\"molecule image\"/></p>");
+			
+
+			//NMR tables
+			builder.append("<h3> NMR peak lists and images: </h3>");
+			
+			//1H NMR predicted spectra
+			
+			//1H NMR spectrum image link
+			String H1NMRLink = "http://www.hmdb.ca/labm/metabolites/" + HMDB + 
+					"/chemical/pred_hnmr_spectrum/" + name + ".gif";
+			H1NMRLink = "<a href=\"" + H1NMRLink + "\"> Spectrum image </a><br /><br />";
+		
+			//1H NMR peak list
+			String H1NMR = null;
+			try {
+			//Set up connection and put InChI key into a string
+				HttpClient httpclient = new DefaultHttpClient();
+				HttpGet getH1NMR = new HttpGet("http://www.hmdb.ca/labm/metabolites/"
+				+ HMDB + "/chemical/pred_hnmr_peaklist/" + HMDB + "_peaks.txt");
+	
+				HttpResponse response = null;
+				response = httpclient.execute(getH1NMR);
+	
+				HttpEntity entity = response.getEntity();
+				H1NMR = EntityUtils.toString(entity);
+	
+			} catch (ClientProtocolException ClientException) {
+				System.out.println(ClientException.getMessage());
+				ClientException.printStackTrace();
+			} catch (IOException IoException) {
+				System.out.println(IoException.getMessage());
+				IoException.printStackTrace();
+			} catch (Throwable throwable) {
+				  System.out.println(throwable.getMessage());
+				  throwable.printStackTrace();
+			}
+			H1NMR = H1NMR.replace("	", "</td><td>");
+			H1NMR = H1NMR.replace("\n", "</tr><tr>");
+			H1NMR = H1NMR.replace("<td></td>", "");
+			System.out.println(H1NMR);
+			H1NMR = "Peak list: <br /><table border=\"0\"><tr> " + H1NMR + "</tr></table>";
+			//TODO remove last column (the most right)
+			builder.append("<sup>1</sup>H NMR peak list and image: <br />" +
+					H1NMRLink + H1NMR);
+			
+			
+			//13C NMR predicted spectra
+			
+			//13C NMR spectrum image
+			String C13NMRLink = "http://www.hmdb.ca/labm/metabolites/" + HMDB + 
+					"/chemical/pred_cnmr_spectrum/" + name + "_C.gif";
+			C13NMRLink = "<a href=\"" + C13NMRLink + "\"> Spectrum image </a><br /><br />";
+	
+			//13C NMR peak list
+			String C13NMR = null;
+			try {
+			//Set up connection and put InChI key into a string
+				HttpClient httpclient = new DefaultHttpClient();
+				HttpGet getC13NMR = new HttpGet("http://www.hmdb.ca/labm/metabolites/"
+				+ HMDB + "/chemical/pred_cnmr_peaklist/" + HMDB + "_peaks.txt");
+				System.out.println("http://www.hmdb.ca/labm/metabolites/"
+				+ HMDB + "/chemical/pred_cnmr_peaklist/" + HMDB + "_peaks.txt");
+				HttpResponse response = null;
+				response = httpclient.execute(getC13NMR);
+	
+				HttpEntity entity = response.getEntity();
+				C13NMR = EntityUtils.toString(entity);
+	
+			} catch (ClientProtocolException ClientException) {
+				System.out.println(ClientException.getMessage());
+				ClientException.printStackTrace();
+			} catch (IOException IoException) {
+				System.out.println(IoException.getMessage());
+				IoException.printStackTrace();
+			} catch (Throwable throwable) {
+				  System.out.println(throwable.getMessage());
+				  throwable.printStackTrace();
+			}
+			C13NMR = C13NMR.replace("	", "</td><td>");
+			C13NMR = C13NMR.replace("\n", "</tr><tr>");
+			C13NMR = "Peak list: <br /><table border=\"0\"><tr> " + C13NMR + "</tr></table>";
+			//TODO remove last column (the most right)
+			builder.append("<br /> <sup>13</sup>C NMR peak list and image: <br />" +
+					C13NMRLink + C13NMR + "</p>");
+		
+			return builder.toString();
+		}
+			
+		else {
+			String str = "The plugin only works for metabolites";
+			System.out.println(str);
+			return str;
+		}
+	}
+
 ////Request structure image from Cactus
 //		public void moleculeImage(){
 //			URL imageUrl = null;
@@ -510,122 +437,17 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 //			
 //		}
 //		
-//// Mass spectroscopy images
-//		public void MSimages(){
-//			
-//			Image imageLow = null;
-//			Image imageMed = null;
-//			Image imageHigh = null;
-//			
-//			URL imageUrlLow = null; 
-//			URL imageUrlMed = null;
-//			URL imageUrlHigh = null;
-//		//Set up connection
-//			try {
-//				imageUrlLow = new URL("http://www.hmdb.ca/labm/metabolites/" + setHMDB(HMDB) + "/ms/spectra/" + setHMDB(HMDB) + "L.png");
-//				imageUrlMed = new URL("http://www.hmdb.ca/labm/metabolites/" + setHMDB(HMDB) + "/ms/spectraM/" + setHMDB(HMDB) + "M.png");
-//				imageUrlHigh = new URL("http://www.hmdb.ca/labm/metabolites/" + setHMDB(HMDB) + "/ms/spectraH/" + setHMDB(HMDB) + "H.png");
-//			} catch (MalformedURLException e) {
-////				panel.add(new JLabel("Images could not be loaded. Please try again later"));
-//			}
-//		//Read image from url
-//			try {
-//			// Low energy image
-//				imageLow = ImageIO.read(imageUrlLow);
-//				
-//				final BufferedImage bufferedImageLow = new BufferedImage(400, 500, BufferedImage.TYPE_INT_RGB);
-//		        final Graphics2D gLow = bufferedImageLow.createGraphics();
-//
-//		        gLow.setComposite(AlphaComposite.Src);
-//		        gLow.drawImage(imageLow, 0, 0, 400, 500, null);
-//		        gLow.dispose();
-//		        
-////		        panel.add(new JLabel(new ImageIcon(bufferedImageLow)));
-//		        
-//		    //Medium energy image		        
-//		        imageMed = ImageIO.read(imageUrlMed);
-//		        
-//		        final BufferedImage bufferedImageMed = new BufferedImage(400, 500, BufferedImage.TYPE_INT_RGB);
-//		        final Graphics2D gMed = bufferedImageLow.createGraphics();
-//
-//		        gMed.setComposite(AlphaComposite.Src);
-//		        gMed.drawImage(imageLow, 0, 0, 400, 500, null);
-//		        gMed.dispose();
-//		        
-////		        panel.add(new JLabel(new ImageIcon(bufferedImageMed)));
-//		        
-//		    //High energy image
-//		        imageHigh = ImageIO.read(imageUrlHigh);
-//		        
-//		        final BufferedImage bufferedImageHigh = new BufferedImage(400, 500, BufferedImage.TYPE_INT_RGB);
-//		        final Graphics2D gHigh = bufferedImageLow.createGraphics();
-//
-//		        gHigh.setComposite(AlphaComposite.Src);
-//		        gHigh.drawImage(imageLow, 0, 0, 400, 500, null);
-//		        gHigh.dispose();
-//		        
-////		        panel.add(new JLabel(new ImageIcon(bufferedImageHigh)));
-//					
-//			} catch (IOException e) {
-////				panel.add(new JLabel("Images could not be loaded. Please try again later"));
-//			}
-//		
-//		}
-////NMR peak lists	
-//		public void NMRTables(){
-//			String HNMR = null;
-//			String CNMR = null;
-//			HttpResponse responseH = null;
-//			HttpResponse responseC = null;
-//				
-//			JTextArea HC = new JTextArea();
-//			HC.setEditable(false);
-//			HC.setLineWrap(true);
-//			HC.setWrapStyleWord(false);
-//			
-//			try {
-//		//Set up connection
-//				HttpClient httpclient = new DefaultHttpClient();
-//				
-//				HttpGet getHNMR = new HttpGet("http://www.hmdb.ca/labm/metabolites/" + setHMDB(HMDB) + "/chemical/pred_hnmr_peaklist/" + setHMDB(HMDB) + "_peaks.txt");
-//				HttpGet getCNMR = new HttpGet("http://www.hmdb.ca/labm/metabolites/" + setHMDB(HMDB) + "/chemical/pred_cnmr_peaklist/" + setHMDB(HMDB) + "_peaks.txt");
-//				
-//				responseH = httpclient.execute(getHNMR);
-//				responseC = httpclient.execute(getCNMR);
-//				
-//			//Generate HNMR peak list
-//				HttpEntity entityH = responseH.getEntity();
-//				HNMR = EntityUtils.toString(entityH);
-//				
-//			//Generate CNMR peak list
-//				HttpEntity entityC = responseH.getEntity();
-//				CNMR = EntityUtils.toString(entityC);
-//			//Set peak lists to textarea
-//				HC.setText(CNMR + "\n" + HNMR);
-//				
-//			} catch (ClientProtocolException ClientException) {
-//				HC.setText("Peak lists could not be loaded. Please try again later");
-//			} catch (IOException IoException) {
-//				HC.setText("Peak lists could not be loaded. Please try again later");
-//			} catch (Throwable throwable) {
-//				HC.setText("Peak lists could not be loaded. Please try again later");
-//			}
-//			
-////			panel.add(HC);
-//		}
-		
-
-		
-		private boolean disposed = false;
-		public void dispose()
-		{
-			assert (!disposed);
-			engine.removeApplicationEventListener(this);
-			VPathway vpwy = engine.getActiveVPathway();
-			if (vpwy != null) vpwy.removeSelectionListener(this);
-			executor.shutdown();
-			disposed = true;
-		}
+	
+	private boolean disposed = false;
+	public void dispose()
+	{
+		assert (!disposed);
+		engine.removeApplicationEventListener(this);
+		VPathway vpwy = engine.getActiveVPathway();
+		if (vpwy != null) vpwy.removeSelectionListener(this);
+		executor.shutdown();
+		disposed = true;
+	}
 	
 
 	public void done() {}

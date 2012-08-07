@@ -1,5 +1,6 @@
 package metaboliteplugin;
 
+import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
 
 import metaboliteplugin.MetaboliteInfo;
@@ -15,7 +16,7 @@ public class MetaboliteInfoPlugin implements Plugin
 	{
 		pane = new MetaboliteInfo(standaloneEngine.getSwingEngine());
 		JTabbedPane sidebarTabbedPane = standaloneEngine.getSideBarTabbedPane();
-		sidebarTabbedPane.add(MetaboliteInfo.TITLE, pane);
+		sidebarTabbedPane.add(MetaboliteInfo.TITLE, new JScrollPane(pane));
 		
 		standaloneEngine.getSwingEngine().getEngine().addApplicationEventListener(pane);
 	}
