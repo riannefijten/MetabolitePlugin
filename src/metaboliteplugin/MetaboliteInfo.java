@@ -241,7 +241,8 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 					name = Utils.oneOf (
 							gdbManager.getCurrentGdb().getAttributes (Utils.oneOf(destrefs), "Symbol"));
 					if(input == e) {
-						builder.append("<table border=\"0\"> <th  colspan=\"2\"> General info: </th>");
+						builder.append("<h3> General info: </h3>");
+						builder.append("<table border=\"0\">");
 						builder.append("<tr><td>Name: </td><td>" + name + "</td></tr>");
 						builder.append("<tr><td>ID: </td><td>" + xref + "</td></tr>");
 						builder.append("<tr><td>Molecular formula: </td><td>" + bruto + "</td></tr>");
@@ -307,6 +308,14 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 			}
 			inchiKey = inchiKey.replace("InChIKey=", "");
 			builder.append("<tr><td> Inchi Key: </td><td>" + inchiKey + "</td></tr></table>");
+	
+			//Molecule image
+			String imageUrl = null;
+			imageUrl = "http://cactus.nci.nih.gov/chemical/structure/" + smiles + "/image";
+			builder.append("<br /><h3> Molecule image: </h3><p>");
+			builder.append("<img src=" + imageUrl + "alt=\"molecule image\"/></p>");
+			
+			
 			//MS images
 			String urlLow = "http://www.hmdb.ca/labm/metabolites/" + HMDB + "/ms/spectra/" + HMDB + "L.png";
 			String urlMed = "http://www.hmdb.ca/labm/metabolites/" + HMDB + "/ms/spectraM/" + HMDB + "M.png";
@@ -317,16 +326,7 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 			builder.append("<a href=\"" + urlLow + "\"> Low energy MS image </a><br />");
 			builder.append("<a href=\"" + urlMed + "\"> Medium energy MS image </a><br />");
 			builder.append("<a href=\"" + urlHigh + "\"> High energy MS image </a><br /></p>");
-	
-			
-			
-			//Molecule image
-			String imageUrl = null;
-			imageUrl = "http://cactus.nci.nih.gov/chemical/structure/" + smiles + "/image";
-			builder.append("<br /><h3> Molecule image: </h3><p>");
-			builder.append("<img src=" + imageUrl + "alt=\"molecule image\"/></p>");
-			
-
+				
 			//NMR tables
 			builder.append("<h3> NMR peak lists and images: </h3>");
 			
