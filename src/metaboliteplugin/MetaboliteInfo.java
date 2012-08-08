@@ -216,38 +216,47 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 	
 	public String getContent(PathwayElement e){
 		
-		if (e.getDataNodeType().equals("Metabolite")){
-			System.out.println("metabolite found! eureka!!!");
-			
+		Xref ref = e.getXref();
+		IDMapper gdb = gdbManager.getCurrentGdb();		
+		Set<Xref> destrefs = null;
+		try {
+			destrefs = gdb.mapID(ref, BioDataSource.HMDB);
+		} catch (IDMapperException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+		
+		if (e.getDataNodeType().equals("Metabolite"))
+		{			
 			String HMDB = null;
 			String smiles = null;
 			String name = null;
 			StringBuilder builder = new StringBuilder();
-			String xref = e.getXref().getId();
 			
-			Xref ref = e.getXref();
-			IDMapper gdb = gdbManager.getCurrentGdb();
+			String xref = e.getXref().getId();
+						
+			if (destrefs.size() < 1){
+				String str = "Please select a database";
+				return str;
+			}
+			
 			//TODO explain why nothing is shown when no database is selected.
 			try
 			{
-				Set<Xref> destrefs = gdb.mapID(ref, BioDataSource.HMDB);
-				if (destrefs.size() > 0)
-				{
-					HMDB = ref.getId(); //TODO assuming that the given id is an HMDB id
-					smiles = Utils.oneOf (
-							gdbManager.getCurrentGdb().getAttributes (Utils.oneOf(destrefs), "SMILES"));
-					String bruto = Utils.oneOf (
-							gdbManager.getCurrentGdb().getAttributes (Utils.oneOf(destrefs), "BrutoFormula"));
-					name = Utils.oneOf (
-							gdbManager.getCurrentGdb().getAttributes (Utils.oneOf(destrefs), "Symbol"));
-					if(input == e) {
-						builder.append("<h3> General info: </h3>");
-						builder.append("<table border=\"0\">");
-						builder.append("<tr><td>Name: </td><td>" + name + "</td></tr>");
-						builder.append("<tr><td>ID: </td><td>" + xref + "</td></tr>");
-						builder.append("<tr><td>Molecular formula: </td><td>" + bruto + "</td></tr>");
-						builder.append("<tr><td>SMILES: </td><td>" + smiles + "</td></tr>");
-					}
+				HMDB = ref.getId(); //TODO assuming that the given id is an HMDB id
+				smiles = Utils.oneOf (
+						gdbManager.getCurrentGdb().getAttributes (Utils.oneOf(destrefs), "SMILES"));
+				String bruto = Utils.oneOf (
+						gdbManager.getCurrentGdb().getAttributes (Utils.oneOf(destrefs), "BrutoFormula"));
+				name = Utils.oneOf (
+						gdbManager.getCurrentGdb().getAttributes (Utils.oneOf(destrefs), "Symbol"));
+				if(input == e) {
+					builder.append("<h3> General info: </h3>");
+					builder.append("<table border=\"0\">");
+					builder.append("<tr><td>Name: </td><td>" + name + "</td></tr>");
+					builder.append("<tr><td>ID: </td><td>" + xref + "</td></tr>");
+					builder.append("<tr><td>Molecular formula: </td><td>" + bruto + "</td></tr>");
+					builder.append("<tr><td>SMILES: </td><td>" + smiles + "</td></tr>");
 				}
 			}
 			catch (IDMapperException ex)
@@ -255,8 +264,8 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 				Logger.log.error ("while getting cross refs", ex);
 				System.out.println("IDMapperException");
 			}
-			
-			//Inchi			
+				
+		//Inchi			
 			String inchi = null;
 			try {
 			//Set up connection and put InChI key into a string
@@ -309,134 +318,111 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 			inchiKey = inchiKey.replace("InChIKey=", "");
 			builder.append("<tr><td> Inchi Key: </td><td>" + inchiKey + "</td></tr></table>");
 	
-			//Molecule image
-			String imageUrl = null;
-			imageUrl = "http://cactus.nci.nih.gov/chemical/structure/" + smiles + "/image";
-			builder.append("<br /><h3> Molecule image: </h3><p>");
-			builder.append("<img src=" + imageUrl + "alt=\"molecule image\"/></p>");
-			
 			
 			//MS images
 			String urlLow = "http://www.hmdb.ca/labm/metabolites/" + HMDB + "/ms/spectra/" + HMDB + "L.png";
 			String urlMed = "http://www.hmdb.ca/labm/metabolites/" + HMDB + "/ms/spectraM/" + HMDB + "M.png";
 			String urlHigh = "http://www.hmdb.ca/labm/metabolites/" + HMDB + "/ms/spectraH/" + HMDB + "H.png";
 			
-			
 			builder.append("<br /><h3> Mass spectroscopy images: </h3><p>");
 			builder.append("<a href=\"" + urlLow + "\"> Low energy MS image </a><br />");
 			builder.append("<a href=\"" + urlMed + "\"> Medium energy MS image </a><br />");
 			builder.append("<a href=\"" + urlHigh + "\"> High energy MS image </a><br /></p>");
 				
-			//NMR tables
-			builder.append("<h3> NMR peak lists and images: </h3>");
-			
-			//1H NMR predicted spectra
-			
+//			//NMR tables
+//			System.out.println("builder before nmr: "+builder);
+//			builder.append("<h3> NMR peak lists and images: </h3>");
+//			
+//			//1H NMR predicted spectra
+//			
 			//1H NMR spectrum image link
 			String H1NMRLink = "http://www.hmdb.ca/labm/metabolites/" + HMDB + 
 					"/chemical/pred_hnmr_spectrum/" + name + ".gif";
 			H1NMRLink = "<a href=\"" + H1NMRLink + "\"> Spectrum image </a><br /><br />";
-		
-			//1H NMR peak list
-			String H1NMR = null;
-			try {
-			//Set up connection and put InChI key into a string
-				HttpClient httpclient = new DefaultHttpClient();
-				HttpGet getH1NMR = new HttpGet("http://www.hmdb.ca/labm/metabolites/"
-				+ HMDB + "/chemical/pred_hnmr_peaklist/" + HMDB + "_peaks.txt");
-	
-				HttpResponse response = null;
-				response = httpclient.execute(getH1NMR);
-	
-				HttpEntity entity = response.getEntity();
-				H1NMR = EntityUtils.toString(entity);
-	
-			} catch (ClientProtocolException ClientException) {
-				System.out.println(ClientException.getMessage());
-				ClientException.printStackTrace();
-			} catch (IOException IoException) {
-				System.out.println(IoException.getMessage());
-				IoException.printStackTrace();
-			} catch (Throwable throwable) {
-				  System.out.println(throwable.getMessage());
-				  throwable.printStackTrace();
-			}
-			H1NMR = H1NMR.replace("	", "</td><td>");
-			H1NMR = H1NMR.replace("\n", "</tr><tr>");
-			H1NMR = H1NMR.replace("<td></td>", "");
-			System.out.println(H1NMR);
-			H1NMR = "Peak list: <br /><table border=\"0\"><tr> " + H1NMR + "</tr></table>";
-			//TODO remove last column (the most right)
+//		
+//			//1H NMR peak list
+//			String H1NMR = null;
+//			System.out.println("builder before nmr2: "+builder);
+//			try {
+//				System.out.println("builder in try: "+builder);
+//			//Set up connection and put InChI key into a string
+//				HttpClient httpclient = new DefaultHttpClient();
+//				HttpGet getH1NMR = new HttpGet("http://www.hmdb.ca/labm/metabolites/"
+//				+ HMDB + "/chemical/pred_hnmr_peaklist/" + HMDB + "_peaks.txt");
+//	
+//				HttpResponse response = null;
+//				response = httpclient.execute(getH1NMR);
+//	
+//				HttpEntity entity = response.getEntity();
+//				H1NMR = EntityUtils.toString(entity);
+//				System.out.println("1: " + H1NMR);
+//			} catch (ClientProtocolException ClientException) {
+//				System.out.println("clientexception");
+//				ClientException.printStackTrace();
+//			} catch (IOException IoException) {
+//				System.out.println("IOException");
+//				IoException.printStackTrace();
+//			} catch (Throwable throwable) {
+//				  System.out.println("Throwable");
+//				  throwable.printStackTrace();
+//			}
+//			H1NMR = H1NMR.replace("	", "</td><td>");
+//			H1NMR = H1NMR.replace("\n", "</tr><tr>");
+//			H1NMR = H1NMR.replace("<td></td>", "");
+//			System.out.println("2: " + H1NMR);
+//			H1NMR = "Peak list: <br /><table border=\"0\"><tr> " + H1NMR + "</tr></table>";
+//			//TODO remove last column (the most right)
 			builder.append("<sup>1</sup>H NMR peak list and image: <br />" +
-					H1NMRLink + H1NMR);
-			
-			
-			//13C NMR predicted spectra
-			
+					H1NMRLink /*+ H1NMR*/);
+//			System.out.println("builder after 1h NMR"+builder);
+//			
+//			//13C NMR predicted spectra
+//			
 			//13C NMR spectrum image
 			String C13NMRLink = "http://www.hmdb.ca/labm/metabolites/" + HMDB + 
 					"/chemical/pred_cnmr_spectrum/" + name + "_C.gif";
 			C13NMRLink = "<a href=\"" + C13NMRLink + "\"> Spectrum image </a><br /><br />";
-	
-			//13C NMR peak list
-			String C13NMR = null;
-			try {
-			//Set up connection and put InChI key into a string
-				HttpClient httpclient = new DefaultHttpClient();
-				HttpGet getC13NMR = new HttpGet("http://www.hmdb.ca/labm/metabolites/"
-				+ HMDB + "/chemical/pred_cnmr_peaklist/" + HMDB + "_peaks.txt");
-				System.out.println("http://www.hmdb.ca/labm/metabolites/"
-				+ HMDB + "/chemical/pred_cnmr_peaklist/" + HMDB + "_peaks.txt");
-				HttpResponse response = null;
-				response = httpclient.execute(getC13NMR);
-	
-				HttpEntity entity = response.getEntity();
-				C13NMR = EntityUtils.toString(entity);
-	
-			} catch (ClientProtocolException ClientException) {
-				System.out.println(ClientException.getMessage());
-				ClientException.printStackTrace();
-			} catch (IOException IoException) {
-				System.out.println(IoException.getMessage());
-				IoException.printStackTrace();
-			} catch (Throwable throwable) {
-				  System.out.println(throwable.getMessage());
-				  throwable.printStackTrace();
-			}
-			C13NMR = C13NMR.replace("	", "</td><td>");
-			C13NMR = C13NMR.replace("\n", "</tr><tr>");
-			C13NMR = "Peak list: <br /><table border=\"0\"><tr> " + C13NMR + "</tr></table>";
-			//TODO remove last column (the most right)
+//	
+//			//13C NMR peak list
+//			String C13NMR = null;
+//			try {
+//			//Set up connection and put InChI key into a string
+//				HttpClient httpclient = new DefaultHttpClient();
+//				HttpGet getC13NMR = new HttpGet("http://www.hmdb.ca/labm/metabolites/"
+//				+ HMDB + "/chemical/pred_cnmr_peaklist/" + HMDB + "_peaks.txt");
+//				System.out.println("http://www.hmdb.ca/labm/metabolites/"
+//				+ HMDB + "/chemical/pred_cnmr_peaklist/" + HMDB + "_peaks.txt");
+//				HttpResponse response = null;
+//				response = httpclient.execute(getC13NMR);
+//	
+//				HttpEntity entity = response.getEntity();
+//				C13NMR = EntityUtils.toString(entity);
+//	
+//			} catch (ClientProtocolException ClientException) {
+//				System.out.println(ClientException.getMessage());
+//				ClientException.printStackTrace();
+//			} catch (IOException IoException) {
+//				System.out.println(IoException.getMessage());
+//				IoException.printStackTrace();
+//			} catch (Throwable throwable) {
+//				  System.out.println(throwable.getMessage());
+//				  throwable.printStackTrace();
+//			}
+//			C13NMR = C13NMR.replace("	", "</td><td>");
+//			C13NMR = C13NMR.replace("\n", "</tr><tr>");
+//			C13NMR = "Peak list: <br /><table border=\"0\"><tr> " + C13NMR + "</tr></table>";
+//			//TODO remove last column (the most right)
 			builder.append("<br /> <sup>13</sup>C NMR peak list and image: <br />" +
-					C13NMRLink + C13NMR + "</p>");
-		
+					C13NMRLink + /*C13NMR +*/ "</p>");
+//			System.out.println("builder after nmr: "+builder);
 			return builder.toString();
 		}
-			
+		
 		else {
 			String str = "The plugin only works for metabolites";
-			System.out.println(str);
 			return str;
 		}
 	}
-
-////Request structure image from Cactus
-//		public void moleculeImage(){
-//			URL imageUrl = null;
-//			try {
-//				imageUrl = new URL("http://cactus.nci.nih.gov/chemical/structure/" + setSMILES(SMILES) + "/image");
-//				Image image = ImageIO.read(imageUrl);
-//			
-////				panel.add(new JLabel(new ImageIcon(image)));
-//				
-//			} catch (MalformedURLException e) {
-////				panel.add(new JLabel("Image could not be loaded. Please try again later"));
-//			} catch (IOException e) {
-////				panel.add(new JLabel("Image could not be loaded. Please try again later"));
-//			}
-//			
-//		}
-//		
 	
 	private boolean disposed = false;
 	public void dispose()
