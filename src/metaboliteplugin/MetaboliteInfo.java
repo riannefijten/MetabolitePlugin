@@ -22,6 +22,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
@@ -53,6 +54,17 @@ import org.bridgedb.IDMapper;
 import org.bridgedb.IDMapperException;
 import org.bridgedb.Xref;
 import org.bridgedb.bio.BioDataSource;
+
+import org.openscience.cdk.DefaultChemObjectBuilder;
+import org.openscience.cdk.exception.CDKException;
+import org.openscience.cdk.interfaces.IAtom;
+import org.openscience.cdk.interfaces.IAtomContainer;
+import org.openscience.cdk.interfaces.IMolecule;
+import org.openscience.cdk.layout.StructureDiagramGenerator;
+
+import org.openscience.cdk.smiles.SmilesParser;
+import org.openscience.cdk.tools.BremserOneSphereHOSECodePredictor;
+import org.openscience.cdk.tools.HOSECodeGenerator;
 import org.pathvisio.core.ApplicationEvent;
 import org.pathvisio.core.Engine;
 import org.pathvisio.core.Engine.ApplicationEventListener;
@@ -94,7 +106,7 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 
 	public MetaboliteInfo(SwingEngine se)
 	{
-//			super();
+//		super();
 		Engine engine = se.getEngine();
 		engine.addApplicationEventListener(this);
 		VPathway vp = engine.getActiveVPathway();
@@ -208,14 +220,30 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 			}				
 		}
 	}
+	
+	private boolean disposed = false;
+	public void dispose()
+	{
+		assert (!disposed);
+		engine.removeApplicationEventListener(this);
+		VPathway vpwy = engine.getActiveVPathway();
+		if (vpwy != null) vpwy.removeSelectionListener(this);
+		executor.shutdown();
+		disposed = true;
+	}
+	
+
+	public void done() {}
 		
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////PLUGIN CONTENT////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	private StringBuilder builder = new StringBuilder();
 	
 	public String getContent(PathwayElement e){
 		
+		builder.setLength(0);
 		Xref ref = e.getXref();
 		IDMapper gdb = gdbManager.getCurrentGdb();		
 		Set<Xref> destrefs = null;
@@ -231,8 +259,7 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 			String HMDB = null;
 			String smiles = null;
 			String name = null;
-			StringBuilder builder = new StringBuilder();
-			
+					
 			String xref = e.getXref().getId();
 						
 			if (destrefs.size() < 1){
@@ -250,14 +277,12 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 						gdbManager.getCurrentGdb().getAttributes (Utils.oneOf(destrefs), "BrutoFormula"));
 				name = Utils.oneOf (
 						gdbManager.getCurrentGdb().getAttributes (Utils.oneOf(destrefs), "Symbol"));
-				if(input == e) {
-					builder.append("<h3> General info: </h3>");
-					builder.append("<table border=\"0\">");
-					builder.append("<tr><td>Name: </td><td>" + name + "</td></tr>");
-					builder.append("<tr><td>ID: </td><td>" + xref + "</td></tr>");
-					builder.append("<tr><td>Molecular formula: </td><td>" + bruto + "</td></tr>");
-					builder.append("<tr><td>SMILES: </td><td>" + smiles + "</td></tr>");
-				}
+				builder.append("<h3> General info: </h3>");
+				builder.append("<table border=\"0\">");
+				builder.append("<tr><td>Name: </td><td>" + name + "</td></tr>");
+				builder.append("<tr><td>ID: </td><td>" + xref + "</td></tr>");
+				builder.append("<tr><td>Molecular formula: </td><td>" + bruto + "</td></tr>");
+				builder.append("<tr><td>SMILES: </td><td>" + smiles + "</td></tr>");
 			}
 			catch (IDMapperException ex)
 			{
@@ -415,6 +440,7 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 			builder.append("<br /> <sup>13</sup>C NMR peak list and image: <br />" +
 					C13NMRLink + /*C13NMR +*/ "</p>");
 //			System.out.println("builder after nmr: "+builder);
+			CreateAtomContainer(smiles);
 			return builder.toString();
 		}
 		
@@ -423,20 +449,70 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 			return str;
 		}
 	}
-	
-	private boolean disposed = false;
-	public void dispose()
-	{
-		assert (!disposed);
-		engine.removeApplicationEventListener(this);
-		VPathway vpwy = engine.getActiveVPathway();
-		if (vpwy != null) vpwy.removeSelectionListener(this);
-		executor.shutdown();
-		disposed = true;
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////GENERATE IATOMCONTAINER FOR METABOLITE/////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+	private void CreateAtomContainer(String sm) {
+		String text = sm;
+		System.out.println("smilestext " + text);
+		try
+		{
+			SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
+			IAtomContainer mContainer = sp.parseSmiles(text);
+			System.out.println("iatomcontainer " + mContainer);
+
+			HOSEGenerator(mContainer);		
+		}
+		catch (Exception e)
+		{
+			Logger.log.error ("Chempaint error", e);
+		};
 	}
 	
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////NMR SHIFT CALCULATIONS/////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	protected transient HOSECodeGenerator hcg = new HOSECodeGenerator();
+	protected transient BremserOneSphereHOSECodePredictor predictor = new BremserOneSphereHOSECodePredictor();	
+	
+	public void HOSEGenerator(IAtomContainer ac){
+		IAtomContainer mc = ac;
+		String hoseCode = null;
+		double shift = 0;
+		
+		builder.append("<h3> Predicted NMR shifts: </h3>" +
+				"<table border=\"0\"> " +
+				"<tr><td> Atom Number </td><td> Shift</td></tr>");
+		
+		for (int f = 0; f < mc.getAtomCount(); f++) {
+			try {
+				hoseCode = hcg.getHOSECode(mc, mc.getAtom(f), 1);
+				hoseCode = hcg.makeBremserCompliant(hoseCode);
+				shift = predictor.predict(hoseCode);
+				System.out.println(f + ": "+shift);
+				
+				IAtom atom = mc.getAtom(f);
+				String Atom2 = atom.getSymbol();
+				Double Atom3 = atom.getBondOrderSum();
+				System.out.println(Atom2);
+				System.out.println(Atom3);
+				int g = f++;
+				
+				builder.append("<tr><td>" + g + "</td><td>" + shift + "</td></tr>");
+				
+			} catch (Throwable e) {
+				System.out.println("Exception: " + e.getMessage());
+				e.printStackTrace();
+			}
+		}
+		builder.append("</table>");
+		
+	}
 
-	public void done() {}
+	
+	
+	
 
 
 }
