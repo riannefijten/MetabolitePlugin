@@ -27,6 +27,7 @@
 			<include name="httpclient-cache-4.2.jar"/>
 			<include name="httpcore-4.2.jar"/>
 			<include name="httpmime-4.2.jar"/>
+			<include name="spectrumapplet-bin-1.1.jar"/>
 			<include name="org.apache.httpcomponents.httpclient_4.2.jar"/>
 		</fileset>
 	</path>
@@ -56,6 +57,7 @@
 		<unjar src="lib/httpclient-cache-4.2.jar" dest="build"/>
 		<unjar src="lib/httpcore-4.2.jar" dest="build"/>
 		<unjar src="lib/httpmime-4.2.jar" dest="build"/>
+		<unjar src="lib/spectrumapplet-bin-1.1.jar" dest="build"/>
 		<unjar src="lib/org.apache.httpcomponents.httpclient_4.2.jar" dest="build"/>
 		<echo>Creating JAR: ${jar.name}</echo>
 		<jar jarfile="${jar.name}" basedir="build" manifest="META-INF/MANIFEST.MF" />

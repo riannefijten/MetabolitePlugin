@@ -10,5 +10,6 @@
 	<classpathentry kind="lib" path="lib/httpcore-4.2.jar"/>
 	<classpathentry kind="lib" path="lib/httpmime-4.2.jar"/>
 	<classpathentry kind="lib" path="lib/org.apache.httpcomponents.httpclient_4.2.jar"/>
+	<classpathentry kind="lib" path="lib/spectrumapplet-bin-1.1.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

@@ -4,73 +4,65 @@
 
 package metaboliteplugin;
 
-import java.awt.AlphaComposite;
+import java.applet.Applet;
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.Graphics2D;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
+import java.awt.FlowLayout;
+import java.awt.Graphics;
 import java.awt.GridLayout;
-import java.awt.Image;
-import java.awt.Toolkit;
-import java.awt.image.BufferedImage;
-import java.io.BufferedReader;
+import java.awt.LayoutManager;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import javax.imageio.ImageIO;
-import javax.swing.ImageIcon;
+import javax.swing.BoxLayout;
+import javax.swing.JApplet;
 import javax.swing.JEditorPane;
+import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
-import javax.swing.text.StyledEditorKit;
 import javax.swing.text.html.HTMLEditorKit;
-import javax.swing.text.html.ImageView;
-import javax.swing.text.html.HTMLEditorKit.Parser;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
-import org.apache.http.ParseException;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.util.EntityUtils;
-import org.bridgedb.AttributeMapper;
 import org.bridgedb.IDMapper;
 import org.bridgedb.IDMapperException;
 import org.bridgedb.Xref;
 import org.bridgedb.bio.BioDataSource;
-
 import org.openscience.cdk.DefaultChemObjectBuilder;
-import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
-import org.openscience.cdk.interfaces.IMolecule;
-import org.openscience.cdk.layout.StructureDiagramGenerator;
-
 import org.openscience.cdk.smiles.SmilesParser;
 import org.openscience.cdk.tools.BremserOneSphereHOSECodePredictor;
+import org.openscience.cdk.tools.CDKHydrogenAdder;
 import org.openscience.cdk.tools.HOSECodeGenerator;
+import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
+import org.openscience.nmrshiftdb.spectrumapplet.SpectrumView;
+import org.openscience.nmrshiftdb.spectrumapplet.SpectrumViewNoRenderer;
+import org.openscience.nmrshiftdb.spectrumapplet.data.DataContainer;
+import org.openscience.nmrshiftdb.spectrumapplet.data.XYData;
+import org.openscience.nmrshiftdb.spectrumapplet.data.nmr.NmrData;
+import org.openscience.nmrshiftdb.spectrumapplet.data.nmr.NmrPeak;
+import org.openscience.nmrshiftdb.spectrumapplet.data.nmr.Prediction;
+import org.openscience.nmrshiftdb.spectrumapplet.data.nmr.RawNmrData;
+import org.openscience.nmrshiftdb.spectrumapplet.renderer.SpectrumModel;
+import org.openscience.nmrshiftdb.spectrumapplet.renderer.nmr.NmrSpecRenderer;
+import org.openscience.nmrshiftdb.spectrumapplet.util.xml.Spectrum;
 import org.pathvisio.core.ApplicationEvent;
 import org.pathvisio.core.Engine;
 import org.pathvisio.core.Engine.ApplicationEventListener;
 import org.pathvisio.core.data.GdbManager;
 import org.pathvisio.core.debug.Logger;
-import org.pathvisio.core.model.DataNodeType;
 import org.pathvisio.core.model.ObjectType;
 import org.pathvisio.core.model.PathwayElement;
 import org.pathvisio.core.model.PathwayElementEvent;
@@ -83,7 +75,8 @@ import org.pathvisio.core.view.VPathway;
 import org.pathvisio.core.view.VPathwayElement;
 import org.pathvisio.gui.SwingEngine;
 
-public class MetaboliteInfo extends JEditorPane implements SelectionListener, PathwayElementListener, ApplicationEventListener
+
+public class MetaboliteInfo extends JPanel implements SelectionListener, PathwayElementListener, ApplicationEventListener
 {
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -103,6 +96,8 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 	
 	private GdbManager gdbManager;
 	private final SwingEngine se;
+	
+	JEditorPane panel = new JEditorPane();
 
 	public MetaboliteInfo(SwingEngine se)
 	{
@@ -113,16 +108,20 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 		if(vp != null) vp.addSelectionListener(this);
 		this.se = se;
 		this.gdbManager = se.getGdbManager();
-		
-		addHyperlinkListener(se);
-		setEditable(false);
-		setContentType("text/html");
 	
+		setBackground(Color.red);
+//		setLayout(new GridLayout(0,1));
+		
+		panel.addHyperlinkListener(se);
+		panel.setEditable(false);
+		panel.setContentType("text/html");
+		add(panel);
+		
 		executor = Executors.newSingleThreadExecutor();
 
 		//Workaround for #1313
 		//Cause is java bug: http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=6993691
-		setEditorKit(new HTMLEditorKit() {
+		panel.setEditorKit(new HTMLEditorKit() {
 			protected Parser getParser() {
 				try {
 					Class c = Class
@@ -158,7 +157,7 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 
 	private void doQuery() 
 	{
-		setText("Loading");
+		panel.setText("Loading");
 		currRef = input.getXref();
 		
 		executor.execute(new Runnable()
@@ -172,8 +171,8 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 				{
 					public void run()
 					{
-						setText(txt);
-						setCaretPosition(0); // scroll to top.
+						panel.setText(txt);
+						panel.setCaretPosition(0); // scroll to top.
 					}
 				});
 			}
@@ -455,14 +454,15 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 
 	private void CreateAtomContainer(String sm) {
 		String text = sm;
-		System.out.println("smilestext " + text);
 		try
 		{
 			SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
-			IAtomContainer mContainer = sp.parseSmiles(text);
-			System.out.println("iatomcontainer " + mContainer);
-
-			HOSEGenerator(mContainer);		
+			IAtomContainer molecule = sp.parseSmiles(text);
+			CDKHydrogenAdder adder = CDKHydrogenAdder.getInstance(
+					DefaultChemObjectBuilder.getInstance());
+			adder.addImplicitHydrogens(molecule);
+			AtomContainerManipulator.convertImplicitToExplicitHydrogens(molecule);
+			HOSEGenerator(molecule);	
 		}
 		catch (Exception e)
 		{
@@ -475,44 +475,100 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	protected transient HOSECodeGenerator hcg = new HOSECodeGenerator();
 	protected transient BremserOneSphereHOSECodePredictor predictor = new BremserOneSphereHOSECodePredictor();	
+	ArrayList data = new ArrayList();
 	
+	@SuppressWarnings("null")
 	public void HOSEGenerator(IAtomContainer ac){
 		IAtomContainer mc = ac;
 		String hoseCode = null;
 		double shift = 0;
 		
+		
+		
 		builder.append("<h3> Predicted NMR shifts: </h3>" +
 				"<table border=\"0\"> " +
-				"<tr><td> Atom Number </td><td> Shift</td></tr>");
-		
+				"<tr><td> Carbon No. </td><td> Neighbors</td><td> Chem. Shift</td></tr>");
+		StringBuilder All = new StringBuilder();
 		for (int f = 0; f < mc.getAtomCount(); f++) {
-			try {
-				hoseCode = hcg.getHOSECode(mc, mc.getAtom(f), 1);
-				hoseCode = hcg.makeBremserCompliant(hoseCode);
-				shift = predictor.predict(hoseCode);
-				System.out.println(f + ": "+shift);
-				
-				IAtom atom = mc.getAtom(f);
-				String Atom2 = atom.getSymbol();
-				Double Atom3 = atom.getBondOrderSum();
-				System.out.println(Atom2);
-				System.out.println(Atom3);
-				int g = f++;
-				
-				builder.append("<tr><td>" + g + "</td><td>" + shift + "</td></tr>");
-				
-			} catch (Throwable e) {
-				System.out.println("Exception: " + e.getMessage());
-				e.printStackTrace();
+			IAtom atom = mc.getAtom(f);
+			
+			
+			if (atom.getSymbol().equals("C")) {
+				try {
+					hoseCode = hcg.getHOSECode(mc, mc.getAtom(f), 1);
+					hoseCode = hcg.makeBremserCompliant(hoseCode);
+					shift = predictor.predict(hoseCode);
+//					
+//					double out = prediction.getChemicalShift();
+//					PredictionList[f] = shift;
+					System.out.println("shift: "+shift);
+//					System.out.println(PredictionList);
+					NmrPeak peak = new NmrPeak(shift, 0, f);
+					data.add(peak);
+					List<IAtom> neighborList = mc.getConnectedAtomsList(atom);
+					StringBuilder C = new StringBuilder();
+					
+					for (int i = 0; i < neighborList.size(); i++){
+						IAtom neighbor= neighborList.get(i);
+						C.append(neighbor.getSymbol());
+					}
+					int g = f+1;
+					builder.append("<tr><td>" + g + "</td><td>" + C.toString() + 
+							"</td><td>" + shift + "</td></tr>");
+										
+				} catch (Throwable e) {
+					System.out.println("Exception: " + e.getMessage());
+					e.printStackTrace();
+				}
 			}
+//			prediction.setShiftsUsedForPrediction(PredictionList);
 		}
+		System.out.println(data);
 		builder.append("</table>");
-		
+		Images2D();
 	}
 
+
+//////////////////////////////////////////////////////////////////////////
+/////////////////////////////2DImages////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
 	
-	
-	
+	public void Images2D(){
+		
+		String HTMLTag =
+				"<applet name=\"Spectrum_a\" " +
+					"code=\"org/openscience/nmrshiftdb/spectrumapplet/SpectrumViewNoRenderer.class\" " +
+					"codebase=\"/home/rianne/workspace/org.pathvisio.MetaboliteInfo/lib/\"" +
+					"archive=\"spectrumapplet-bin-1.1.jar\" " +
+					"width=\"450\" height=\"350\"> " +
+					"<param name=\"spectrum\" " +
+					"value= \"" + data + "\"> " +
+					"<param name=\"realisticLines\" value= \"true\"> " +
+					"<param name=\"showCoupling\" value= \"true\"> " +
+					"<param name=\"hideNavigation\" value= \"false\"> " +
+					"<param name=\"autoIntensity\" value= \"false\"> " +
+					"<param name=\"solvent\" value= \"CDCL3\"> " +
+				"</applet>";
+		builder.append(HTMLTag);
+		
+////		197.74d;0.0;1|143.55;0.0;0|27.36;0.0;2t|
+//		System.out.println(applet);
+////		
+//		SpectrumViewNoRenderer spectrum = new SpectrumViewNoRenderer();
+//		spectrum.getContentPane() ????
+
+
+//		spectrum.init();
+//////		spectrum.getParameter(value);
+//
+//		add(spectrum, BorderLayout.CENTER);
+////		add(new JLabel(applet));
+		
+		
+		
+		
+
+	}
 
 
 }

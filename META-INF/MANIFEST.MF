@@ -21,4 +21,8 @@ Bundle-ClassPath: .,
  lib/httpclient-cache-4.2.jar,
  lib/httpcore-4.2.jar,
  lib/httpmime-4.2.jar,
- lib/org.apache.httpcomponents.httpclient_4.2.jar
+ lib/org.apache.httpcomponents.httpclient_4.2.jar,
+ library.jar,
+ lib/turbine-2.1.jar,
+ lib/predictor.jar,
+ lib/spectrumapplet-bin-1.1.jar
