@@ -4,30 +4,15 @@
 
 package metaboliteplugin;
 
-import java.applet.Applet;
-import java.applet.AppletStub;
-import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.FlowLayout;
-import java.awt.Graphics;
-import java.awt.GridLayout;
-import java.awt.LayoutManager;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import javax.swing.BoxLayout;
-import javax.swing.JApplet;
 import javax.swing.JEditorPane;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
-import javax.swing.text.StyledEditorKit.BoldAction;
 import javax.swing.text.html.HTMLEditorKit;
 
 import org.apache.http.HttpEntity;
@@ -41,7 +26,6 @@ import org.bridgedb.IDMapper;
 import org.bridgedb.IDMapperException;
 import org.bridgedb.Xref;
 import org.bridgedb.bio.BioDataSource;
-import org.omg.Dynamic.Parameter;
 import org.openscience.cdk.DefaultChemObjectBuilder;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
@@ -50,17 +34,6 @@ import org.openscience.cdk.tools.BremserOneSphereHOSECodePredictor;
 import org.openscience.cdk.tools.CDKHydrogenAdder;
 import org.openscience.cdk.tools.HOSECodeGenerator;
 import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
-import org.openscience.nmrshiftdb.spectrumapplet.SpectrumView;
-import org.openscience.nmrshiftdb.spectrumapplet.SpectrumViewNoRenderer;
-import org.openscience.nmrshiftdb.spectrumapplet.data.DataContainer;
-import org.openscience.nmrshiftdb.spectrumapplet.data.XYData;
-import org.openscience.nmrshiftdb.spectrumapplet.data.nmr.NmrData;
-import org.openscience.nmrshiftdb.spectrumapplet.data.nmr.NmrPeak;
-import org.openscience.nmrshiftdb.spectrumapplet.data.nmr.Prediction;
-import org.openscience.nmrshiftdb.spectrumapplet.data.nmr.RawNmrData;
-import org.openscience.nmrshiftdb.spectrumapplet.renderer.SpectrumModel;
-import org.openscience.nmrshiftdb.spectrumapplet.renderer.nmr.NmrSpecRenderer;
-import org.openscience.nmrshiftdb.spectrumapplet.util.xml.Spectrum;
 import org.pathvisio.core.ApplicationEvent;
 import org.pathvisio.core.Engine;
 import org.pathvisio.core.Engine.ApplicationEventListener;
