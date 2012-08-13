@@ -1,10 +1,6 @@
 PLUGIN INFO
 
-This is a plugin for Pathvisio, which shows information of a selected metabolite. 
-The visualized info contains general info of the metabolite, such as the name, ID and InChI IDs.
-Furthermore, it also describes predicted MS and NMR peaks and links out to pictures of MS and NMR spectra.
-CDK (Chemistry Development Kit) is used to predict 13C NMR spectra that are also visualized in this plugin.
-In this way, the user has access to two 13C peak lists.
+This is a plugin for Pathvisio, which shows information of a selected metabolite. The visualized info contains general info of the metabolite, such as the name, ID and InChI IDs. Furthermore, it also describes predicted MS and NMR peaks and links out to pictures of MS and NMR spectra. CDK (Chemistry Development Kit) is used to predict 13C NMR spectra that are also visualized in this plugin. In this way, the user has access to two 13C peak lists.
 
 COPYRIGHT/LICENCE
 This product is under the APACHE 2.0 license, which can be found at: http://www.apache.org/licenses/LICENSE-2.0 and in the file LICENSE.txt
@@ -21,7 +17,7 @@ INSTALL
 Can be found on the project wiki (2)
 
 MANUAL / HELP
-Can be found ono the project wiki(2)
+Can be found on the project wiki(2)
 
 MANIFEST
 Included .jar files:
@@ -36,5 +32,5 @@ httpmime-4.2.jar (Apache License Version 2.0)
 org.apache.httpcomponents.httpclient_4.2.jar (Apache License Version 2.0)
 
 
-(1) riannefijtengsoc.blogspot.com
+(1) http://riannefijtengsoc.blogspot.com
 (2) https://code.google.com/p/gsoc-metabolite-info-pathvisio-plugin/w/list

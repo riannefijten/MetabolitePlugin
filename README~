@@ -7,7 +7,7 @@ CDK (Chemistry Development Kit) is used to predict 13C NMR spectra that are also
 In this way, the user has access to two 13C peak lists.
 
 COPYRIGHT/LICENCE
-This product is under the APACHE 2.0 license, which can be found at: http://www.apache.org/licenses/LICENSE-2.0
+This product is under the APACHE 2.0 license, which can be found at: http://www.apache.org/licenses/LICENSE-2.0 and in the file LICENSE.txt
 
 AUTHORS
 R. Fijten: riannefijten@gmail.com	
@@ -28,13 +28,13 @@ Included .jar files:
 cdk-1.4.9.jar (The Apache Software License, Version 1.1)
 commons-codec-1.6.jar (Apache License Version 2.0)
 commons-logging-1.1.1.jar (Apache License Version 2.0)
-fluent-hc-4.2.jar
-httpclient-4.2.jar,
-httpclient-cache-4.2.jar,
-httpcore-4.2.jar,
-httpmime-4.2.jar,
-org.apache.httpcomponents.httpclient_4.2.jar
+fluent-hc-4.2.jar (Apache License Version 2.0)
+httpclient-4.2.jar (Apache License Version 2.0)
+httpclient-cache-4.2.jar (Apache License Version 2.0)
+httpcore-4.2.jar (Apache License Version 2.0)
+httpmime-4.2.jar (Apache License Version 2.0)
+org.apache.httpcomponents.httpclient_4.2.jar (Apache License Version 2.0)
 
 
-(1) riannefijtengsoc.blogspot.com
+(1) http://riannefijtengsoc.blogspot.com
 (2) https://code.google.com/p/gsoc-metabolite-info-pathvisio-plugin/w/list
