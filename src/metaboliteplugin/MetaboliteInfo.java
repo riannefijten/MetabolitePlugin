@@ -5,6 +5,7 @@
 package metaboliteplugin;
 
 import java.applet.Applet;
+import java.applet.AppletStub;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.FlowLayout;
@@ -26,6 +27,7 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
+import javax.swing.text.StyledEditorKit.BoldAction;
 import javax.swing.text.html.HTMLEditorKit;
 
 import org.apache.http.HttpEntity;
@@ -39,6 +41,7 @@ import org.bridgedb.IDMapper;
 import org.bridgedb.IDMapperException;
 import org.bridgedb.Xref;
 import org.bridgedb.bio.BioDataSource;
+import org.omg.Dynamic.Parameter;
 import org.openscience.cdk.DefaultChemObjectBuilder;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
@@ -76,7 +79,7 @@ import org.pathvisio.core.view.VPathwayElement;
 import org.pathvisio.gui.SwingEngine;
 
 
-public class MetaboliteInfo extends JPanel implements SelectionListener, PathwayElementListener, ApplicationEventListener
+public class MetaboliteInfo extends JEditorPane implements SelectionListener, PathwayElementListener, ApplicationEventListener
 {
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -96,8 +99,6 @@ public class MetaboliteInfo extends JPanel implements SelectionListener, Pathway
 	
 	private GdbManager gdbManager;
 	private final SwingEngine se;
-	
-	JEditorPane panel = new JEditorPane();
 
 	public MetaboliteInfo(SwingEngine se)
 	{
@@ -108,20 +109,16 @@ public class MetaboliteInfo extends JPanel implements SelectionListener, Pathway
 		if(vp != null) vp.addSelectionListener(this);
 		this.se = se;
 		this.gdbManager = se.getGdbManager();
-	
-		setBackground(Color.red);
-//		setLayout(new GridLayout(0,1));
 		
-		panel.addHyperlinkListener(se);
-		panel.setEditable(false);
-		panel.setContentType("text/html");
-		add(panel);
-		
+		addHyperlinkListener(se);
+		setEditable(false);
+		setContentType("text/html");
+				
 		executor = Executors.newSingleThreadExecutor();
 
 		//Workaround for #1313
 		//Cause is java bug: http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=6993691
-		panel.setEditorKit(new HTMLEditorKit() {
+		setEditorKit(new HTMLEditorKit() {
 			protected Parser getParser() {
 				try {
 					Class c = Class
@@ -157,7 +154,7 @@ public class MetaboliteInfo extends JPanel implements SelectionListener, Pathway
 
 	private void doQuery() 
 	{
-		panel.setText("Loading");
+		setText("Loading");
 		currRef = input.getXref();
 		
 		executor.execute(new Runnable()
@@ -171,8 +168,8 @@ public class MetaboliteInfo extends JPanel implements SelectionListener, Pathway
 				{
 					public void run()
 					{
-						panel.setText(txt);
-						panel.setCaretPosition(0); // scroll to top.
+						setText(txt);
+						setCaretPosition(0); // scroll to top.
 					}
 				});
 			}
@@ -314,7 +311,7 @@ public class MetaboliteInfo extends JPanel implements SelectionListener, Pathway
 				  throwable.printStackTrace();
 			}
 			inchi = inchi.replace("InChI=", "");
-			builder.append("<tr><td> Inchi: </td><td>" + inchi + "</td></tr>");
+			builder.append("<tr><td> Inchi<sup>1</sup>: </td><td>" + inchi + "</td></tr>");
 			//Inchi Key
 			String inchiKey = null;
 			try {
@@ -340,7 +337,7 @@ public class MetaboliteInfo extends JPanel implements SelectionListener, Pathway
 				  throwable.printStackTrace();
 			}
 			inchiKey = inchiKey.replace("InChIKey=", "");
-			builder.append("<tr><td> Inchi Key: </td><td>" + inchiKey + "</td></tr></table>");
+			builder.append("<tr><td> Inchi Key<sup>1</sup>: </td><td>" + inchiKey + "</td></tr></table>");
 	
 			
 			//MS images
@@ -353,93 +350,98 @@ public class MetaboliteInfo extends JPanel implements SelectionListener, Pathway
 			builder.append("<a href=\"" + urlMed + "\"> Medium energy MS image </a><br />");
 			builder.append("<a href=\"" + urlHigh + "\"> High energy MS image </a><br /></p>");
 				
-//			//NMR tables
-//			System.out.println("builder before nmr: "+builder);
-//			builder.append("<h3> NMR peak lists and images: </h3>");
-//			
-//			//1H NMR predicted spectra
-//			
+			//NMR tables
+			System.out.println("builder before nmr: "+builder);
+			builder.append("<h3> NMR peak lists and images predicted by HMDB <sup>2</sup>: </h3>");
+			
+			//1H NMR predicted spectra
+			
 			//1H NMR spectrum image link
 			String H1NMRLink = "http://www.hmdb.ca/labm/metabolites/" + HMDB + 
 					"/chemical/pred_hnmr_spectrum/" + name + ".gif";
 			H1NMRLink = "<a href=\"" + H1NMRLink + "\"> Spectrum image </a><br /><br />";
-//		
-//			//1H NMR peak list
-//			String H1NMR = null;
-//			System.out.println("builder before nmr2: "+builder);
-//			try {
-//				System.out.println("builder in try: "+builder);
-//			//Set up connection and put InChI key into a string
-//				HttpClient httpclient = new DefaultHttpClient();
-//				HttpGet getH1NMR = new HttpGet("http://www.hmdb.ca/labm/metabolites/"
-//				+ HMDB + "/chemical/pred_hnmr_peaklist/" + HMDB + "_peaks.txt");
-//	
-//				HttpResponse response = null;
-//				response = httpclient.execute(getH1NMR);
-//	
-//				HttpEntity entity = response.getEntity();
-//				H1NMR = EntityUtils.toString(entity);
-//				System.out.println("1: " + H1NMR);
-//			} catch (ClientProtocolException ClientException) {
-//				System.out.println("clientexception");
-//				ClientException.printStackTrace();
-//			} catch (IOException IoException) {
-//				System.out.println("IOException");
-//				IoException.printStackTrace();
-//			} catch (Throwable throwable) {
-//				  System.out.println("Throwable");
-//				  throwable.printStackTrace();
-//			}
-//			H1NMR = H1NMR.replace("	", "</td><td>");
-//			H1NMR = H1NMR.replace("\n", "</tr><tr>");
-//			H1NMR = H1NMR.replace("<td></td>", "");
-//			System.out.println("2: " + H1NMR);
-//			H1NMR = "Peak list: <br /><table border=\"0\"><tr> " + H1NMR + "</tr></table>";
-//			//TODO remove last column (the most right)
-			builder.append("<sup>1</sup>H NMR peak list and image: <br />" +
-					H1NMRLink /*+ H1NMR*/);
-//			System.out.println("builder after 1h NMR"+builder);
-//			
-//			//13C NMR predicted spectra
-//			
+		
+			//1H NMR peak list
+			String H1NMR = null;
+			System.out.println("builder before nmr2: "+builder);
+			try {
+				System.out.println("builder in try: "+builder);
+			//Set up connection and put InChI key into a string
+				HttpClient httpclient = new DefaultHttpClient();
+				HttpGet getH1NMR = new HttpGet("http://www.hmdb.ca/labm/metabolites/"
+				+ HMDB + "/chemical/pred_hnmr_peaklist/" + HMDB + "_peaks.txt");
+	
+				HttpResponse response = null;
+				response = httpclient.execute(getH1NMR);
+	
+				HttpEntity entity = response.getEntity();
+				H1NMR = EntityUtils.toString(entity);
+				System.out.println("1: " + H1NMR);
+			} catch (ClientProtocolException ClientException) {
+				System.out.println("clientexception");
+				ClientException.printStackTrace();
+			} catch (IOException IoException) {
+				System.out.println("IOException");
+				IoException.printStackTrace();
+			} catch (Throwable throwable) {
+				  System.out.println("Throwable");
+				  throwable.printStackTrace();
+			}
+			H1NMR = H1NMR.replace("	", "</td><td>");
+			H1NMR = H1NMR.replace("\n", "</tr><tr>");
+			H1NMR = H1NMR.replace("<td></td>", "");
+			System.out.println("2: " + H1NMR);
+			H1NMR = "Peak list: <br /><table border=\"0\"><tr> " + H1NMR + "</tr></table>";
+			//TODO remove last column (the most right)
+			builder.append("<sup>1</sup>H NMR peak list and image predicted by HMDB<sup>2</sup>: <br />" +
+					H1NMRLink + H1NMR);
+			System.out.println("builder after 1h NMR"+builder);
+			
+			//13C NMR predicted spectra
+			
 			//13C NMR spectrum image
 			String C13NMRLink = "http://www.hmdb.ca/labm/metabolites/" + HMDB + 
 					"/chemical/pred_cnmr_spectrum/" + name + "_C.gif";
 			C13NMRLink = "<a href=\"" + C13NMRLink + "\"> Spectrum image </a><br /><br />";
-//	
-//			//13C NMR peak list
-//			String C13NMR = null;
-//			try {
-//			//Set up connection and put InChI key into a string
-//				HttpClient httpclient = new DefaultHttpClient();
-//				HttpGet getC13NMR = new HttpGet("http://www.hmdb.ca/labm/metabolites/"
-//				+ HMDB + "/chemical/pred_cnmr_peaklist/" + HMDB + "_peaks.txt");
-//				System.out.println("http://www.hmdb.ca/labm/metabolites/"
-//				+ HMDB + "/chemical/pred_cnmr_peaklist/" + HMDB + "_peaks.txt");
-//				HttpResponse response = null;
-//				response = httpclient.execute(getC13NMR);
-//	
-//				HttpEntity entity = response.getEntity();
-//				C13NMR = EntityUtils.toString(entity);
-//	
-//			} catch (ClientProtocolException ClientException) {
-//				System.out.println(ClientException.getMessage());
-//				ClientException.printStackTrace();
-//			} catch (IOException IoException) {
-//				System.out.println(IoException.getMessage());
-//				IoException.printStackTrace();
-//			} catch (Throwable throwable) {
-//				  System.out.println(throwable.getMessage());
-//				  throwable.printStackTrace();
-//			}
-//			C13NMR = C13NMR.replace("	", "</td><td>");
-//			C13NMR = C13NMR.replace("\n", "</tr><tr>");
-//			C13NMR = "Peak list: <br /><table border=\"0\"><tr> " + C13NMR + "</tr></table>";
-//			//TODO remove last column (the most right)
-			builder.append("<br /> <sup>13</sup>C NMR peak list and image: <br />" +
-					C13NMRLink + /*C13NMR +*/ "</p>");
-//			System.out.println("builder after nmr: "+builder);
+	
+			//13C NMR peak list
+			String C13NMR = null;
+			try {
+			//Set up connection and put InChI key into a string
+				HttpClient httpclient = new DefaultHttpClient();
+				HttpGet getC13NMR = new HttpGet("http://www.hmdb.ca/labm/metabolites/"
+				+ HMDB + "/chemical/pred_cnmr_peaklist/" + HMDB + "_peaks.txt");
+				System.out.println("http://www.hmdb.ca/labm/metabolites/"
+				+ HMDB + "/chemical/pred_cnmr_peaklist/" + HMDB + "_peaks.txt");
+				HttpResponse response = null;
+				response = httpclient.execute(getC13NMR);
+	
+				HttpEntity entity = response.getEntity();
+				C13NMR = EntityUtils.toString(entity);
+	
+			} catch (ClientProtocolException ClientException) {
+				System.out.println(ClientException.getMessage());
+				ClientException.printStackTrace();
+			} catch (IOException IoException) {
+				System.out.println(IoException.getMessage());
+				IoException.printStackTrace();
+			} catch (Throwable throwable) {
+				  System.out.println(throwable.getMessage());
+				  throwable.printStackTrace();
+			}
+			C13NMR = C13NMR.replace("	", "</td><td>");
+			C13NMR = C13NMR.replace("\n", "</tr><tr>");
+			C13NMR = "Peak list: <br /><table border=\"0\"><tr> " + C13NMR + "</tr></table>";
+			//TODO remove last column (the most right)
+			builder.append("<br /> <sup>13</sup>C NMR peak list and image predicted by HMDB<sup>2</sup>: <br />" +
+					C13NMRLink + C13NMR + "</p>");
+			System.out.println("builder after nmr: "+builder);
 			CreateAtomContainer(smiles);
+			
+			builder.append("<p> Databases used: <br />" +
+					"<sup>1</sup> <a href=\"http://cactus.nci.nih.gov/chemical/structure\"> Cactus Chemical Identifier Resolver </a><br />" +
+					"<sup>2</sup> <a href=\"http://www.hmdb.ca\"> HMDB database </a><br />" +
+					"<sup>3</sup> <a href=\"http://sourceforge.net/projects/cdk/\"> Chemistry Development Kit </a>");
 			return builder.toString();
 		}
 		
@@ -475,7 +477,7 @@ public class MetaboliteInfo extends JPanel implements SelectionListener, Pathway
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	protected transient HOSECodeGenerator hcg = new HOSECodeGenerator();
 	protected transient BremserOneSphereHOSECodePredictor predictor = new BremserOneSphereHOSECodePredictor();	
-	ArrayList data = new ArrayList();
+	StringBuilder data = new StringBuilder();
 	
 	@SuppressWarnings("null")
 	public void HOSEGenerator(IAtomContainer ac){
@@ -485,7 +487,7 @@ public class MetaboliteInfo extends JPanel implements SelectionListener, Pathway
 		
 		
 		
-		builder.append("<h3> Predicted NMR shifts: </h3>" +
+		builder.append("<h3> NMR shifts predicted by CDK <sup>3</sup>: </h3>" +
 				"<table border=\"0\"> " +
 				"<tr><td> Carbon No. </td><td> Neighbors</td><td> Chem. Shift</td></tr>");
 		StringBuilder All = new StringBuilder();
@@ -498,13 +500,8 @@ public class MetaboliteInfo extends JPanel implements SelectionListener, Pathway
 					hoseCode = hcg.getHOSECode(mc, mc.getAtom(f), 1);
 					hoseCode = hcg.makeBremserCompliant(hoseCode);
 					shift = predictor.predict(hoseCode);
-//					
-//					double out = prediction.getChemicalShift();
-//					PredictionList[f] = shift;
+
 					System.out.println("shift: "+shift);
-//					System.out.println(PredictionList);
-					NmrPeak peak = new NmrPeak(shift, 0, f);
-					data.add(peak);
 					List<IAtom> neighborList = mc.getConnectedAtomsList(atom);
 					StringBuilder C = new StringBuilder();
 					
@@ -525,50 +522,6 @@ public class MetaboliteInfo extends JPanel implements SelectionListener, Pathway
 		}
 		System.out.println(data);
 		builder.append("</table>");
-		Images2D();
 	}
-
-
-//////////////////////////////////////////////////////////////////////////
-/////////////////////////////2DImages////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////
-	
-	public void Images2D(){
-		
-		String HTMLTag =
-				"<applet name=\"Spectrum_a\" " +
-					"code=\"org/openscience/nmrshiftdb/spectrumapplet/SpectrumViewNoRenderer.class\" " +
-					"codebase=\"/home/rianne/workspace/org.pathvisio.MetaboliteInfo/lib/\"" +
-					"archive=\"spectrumapplet-bin-1.1.jar\" " +
-					"width=\"450\" height=\"350\"> " +
-					"<param name=\"spectrum\" " +
-					"value= \"" + data + "\"> " +
-					"<param name=\"realisticLines\" value= \"true\"> " +
-					"<param name=\"showCoupling\" value= \"true\"> " +
-					"<param name=\"hideNavigation\" value= \"false\"> " +
-					"<param name=\"autoIntensity\" value= \"false\"> " +
-					"<param name=\"solvent\" value= \"CDCL3\"> " +
-				"</applet>";
-		builder.append(HTMLTag);
-		
-////		197.74d;0.0;1|143.55;0.0;0|27.36;0.0;2t|
-//		System.out.println(applet);
-////		
-//		SpectrumViewNoRenderer spectrum = new SpectrumViewNoRenderer();
-//		spectrum.getContentPane() ????
-
-
-//		spectrum.init();
-//////		spectrum.getParameter(value);
-//
-//		add(spectrum, BorderLayout.CENTER);
-////		add(new JLabel(applet));
-		
-		
-		
-		
-
-	}
-
 
 }
