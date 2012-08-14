@@ -209,6 +209,9 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 ////////////////////////////////////////PLUGIN CONTENT////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	private StringBuilder builder = new StringBuilder();
+	private String HMDB = null;
+	private String smiles = null;
+	private String name = null;
 	
 	public String getContent(PathwayElement e){
 		
@@ -225,9 +228,7 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 		
 		if (e.getDataNodeType().equals("Metabolite"))
 		{			
-			String HMDB = null;
-			String smiles = null;
-			String name = null;
+	
 					
 			String xref = e.getXref().getId();
 						
@@ -258,158 +259,13 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 				Logger.log.error ("while getting cross refs", ex);
 				System.out.println("IDMapperException");
 			}
-				
-		//Inchi			
-			String inchi = null;
-			try {
-			//Set up connection and put InChI key into a string
-				HttpClient httpclient = new DefaultHttpClient();
-				HttpGet getInchi = new HttpGet("http://cactus.nci.nih.gov/chemical/structure/"
-				+ smiles + "/stdinchi");
-	
-				HttpResponse response = null;
-				response = httpclient.execute(getInchi);
-	
-				HttpEntity entity = response.getEntity();
-				inchi = EntityUtils.toString(entity);
-	
-			} catch (ClientProtocolException ClientException) {
-				System.out.println(ClientException.getMessage());
-				ClientException.printStackTrace();
-			} catch (IOException IoException) {
-				System.out.println(IoException.getMessage());
-				IoException.printStackTrace();
-			} catch (Throwable throwable) {
-				  System.out.println(throwable.getMessage());
-				  throwable.printStackTrace();
-			}
-			inchi = inchi.replace("InChI=", "");
-			builder.append("<tr><td> Inchi<sup>1</sup>: </td><td>" + inchi + "</td></tr>");
-			//Inchi Key
-			String inchiKey = null;
-			try {
-			//Set up connection and put InChI key into a string
-				HttpClient httpclient = new DefaultHttpClient();
-				HttpGet getInchiKey = new HttpGet("http://cactus.nci.nih.gov/chemical/structure/" 
-						+ smiles + "/stdinchikey");
-	
-				HttpResponse response = null;
-				response = httpclient.execute(getInchiKey);
-	
-				HttpEntity entity = response.getEntity();
-				inchiKey = EntityUtils.toString(entity);
-	
-			} catch (ClientProtocolException ClientException) {
-				System.out.println(ClientException.getMessage());
-				ClientException.printStackTrace();
-			} catch (IOException IoException) {
-				System.out.println(IoException.getMessage());
-				IoException.printStackTrace();
-			} catch (Throwable throwable) {
-				  System.out.println(throwable.getMessage());
-				  throwable.printStackTrace();
-			}
-			inchiKey = inchiKey.replace("InChIKey=", "");
-			builder.append("<tr><td> Inchi Key<sup>1</sup>: </td><td>" + inchiKey + "</td></tr></table>");
-	
-			
-			//MS images
-			String urlLow = "http://www.hmdb.ca/labm/metabolites/" + HMDB + "/ms/spectra/" + HMDB + "L.png";
-			String urlMed = "http://www.hmdb.ca/labm/metabolites/" + HMDB + "/ms/spectraM/" + HMDB + "M.png";
-			String urlHigh = "http://www.hmdb.ca/labm/metabolites/" + HMDB + "/ms/spectraH/" + HMDB + "H.png";
-			
-			builder.append("<br /><h3> Mass spectroscopy images: </h3><p>");
-			builder.append("<a href=\"" + urlLow + "\"> Low energy MS image </a><br />");
-			builder.append("<a href=\"" + urlMed + "\"> Medium energy MS image </a><br />");
-			builder.append("<a href=\"" + urlHigh + "\"> High energy MS image </a><br /></p>");
-				
-			//NMR tables
-			System.out.println("builder before nmr: "+builder);
-			builder.append("<h3> NMR peak lists and images predicted by HMDB <sup>2</sup>: </h3>");
-			
-			//1H NMR predicted spectra
-			
-			//1H NMR spectrum image link
-			String H1NMRLink = "http://www.hmdb.ca/labm/metabolites/" + HMDB + 
-					"/chemical/pred_hnmr_spectrum/" + name + ".gif";
-			H1NMRLink = "<a href=\"" + H1NMRLink + "\"> Spectrum image </a><br /><br />";
-		
-			//1H NMR peak list
-			String H1NMR = null;
-			System.out.println("builder before nmr2: "+builder);
-			try {
-				System.out.println("builder in try: "+builder);
-			//Set up connection and put InChI key into a string
-				HttpClient httpclient = new DefaultHttpClient();
-				HttpGet getH1NMR = new HttpGet("http://www.hmdb.ca/labm/metabolites/"
-				+ HMDB + "/chemical/pred_hnmr_peaklist/" + HMDB + "_peaks.txt");
-	
-				HttpResponse response = null;
-				response = httpclient.execute(getH1NMR);
-	
-				HttpEntity entity = response.getEntity();
-				H1NMR = EntityUtils.toString(entity);
-				System.out.println("1: " + H1NMR);
-			} catch (ClientProtocolException ClientException) {
-				System.out.println("clientexception");
-				ClientException.printStackTrace();
-			} catch (IOException IoException) {
-				System.out.println("IOException");
-				IoException.printStackTrace();
-			} catch (Throwable throwable) {
-				  System.out.println("Throwable");
-				  throwable.printStackTrace();
-			}
-			H1NMR = H1NMR.replace("	", "</td><td>");
-			H1NMR = H1NMR.replace("\n", "</tr><tr>");
-			H1NMR = H1NMR.replace("<td></td>", "");
-			System.out.println("2: " + H1NMR);
-			H1NMR = "Peak list: <br /><table border=\"0\"><tr> " + H1NMR + "</tr></table>";
-			//TODO remove last column (the most right)
-			builder.append("<sup>1</sup>H NMR peak list and image predicted by HMDB<sup>2</sup>: <br />" +
-					H1NMRLink + H1NMR);
-			System.out.println("builder after 1h NMR"+builder);
-			
-			//13C NMR predicted spectra
-			
-			//13C NMR spectrum image
-			String C13NMRLink = "http://www.hmdb.ca/labm/metabolites/" + HMDB + 
-					"/chemical/pred_cnmr_spectrum/" + name + "_C.gif";
-			C13NMRLink = "<a href=\"" + C13NMRLink + "\"> Spectrum image </a><br /><br />";
-	
-			//13C NMR peak list
-			String C13NMR = null;
-			try {
-			//Set up connection and put InChI key into a string
-				HttpClient httpclient = new DefaultHttpClient();
-				HttpGet getC13NMR = new HttpGet("http://www.hmdb.ca/labm/metabolites/"
-				+ HMDB + "/chemical/pred_cnmr_peaklist/" + HMDB + "_peaks.txt");
-				System.out.println("http://www.hmdb.ca/labm/metabolites/"
-				+ HMDB + "/chemical/pred_cnmr_peaklist/" + HMDB + "_peaks.txt");
-				HttpResponse response = null;
-				response = httpclient.execute(getC13NMR);
-	
-				HttpEntity entity = response.getEntity();
-				C13NMR = EntityUtils.toString(entity);
-	
-			} catch (ClientProtocolException ClientException) {
-				System.out.println(ClientException.getMessage());
-				ClientException.printStackTrace();
-			} catch (IOException IoException) {
-				System.out.println(IoException.getMessage());
-				IoException.printStackTrace();
-			} catch (Throwable throwable) {
-				  System.out.println(throwable.getMessage());
-				  throwable.printStackTrace();
-			}
-			C13NMR = C13NMR.replace("	", "</td><td>");
-			C13NMR = C13NMR.replace("\n", "</tr><tr>");
-			C13NMR = "Peak list: <br /><table border=\"0\"><tr> " + C13NMR + "</tr></table>";
-			//TODO remove last column (the most right)
-			builder.append("<br /> <sup>13</sup>C NMR peak list and image predicted by HMDB<sup>2</sup>: <br />" +
-					C13NMRLink + C13NMR + "</p>");
 			System.out.println("builder after nmr: "+builder);
+			Inchi();
+			InchiKey();
+			MSImages();
+			NMR();
 			CreateAtomContainer(smiles);
+			
 			
 			builder.append("<p> Databases used: <br />" +
 					"<sup>1</sup> <a href=\"http://cactus.nci.nih.gov/chemical/structure\"> Cactus Chemical Identifier Resolver </a><br />" +
@@ -423,6 +279,165 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 			return str;
 		}
 	}
+				
+	public void Inchi(){
+		//Inchi			
+		String inchi = null;
+		try {
+		//Set up connection and put InChI key into a string
+			HttpClient httpclient = new DefaultHttpClient();
+			HttpGet getInchi = new HttpGet("http://cactus.nci.nih.gov/chemical/structure/"
+			+ smiles + "/stdinchi");
+
+			HttpResponse response = null;
+			response = httpclient.execute(getInchi);
+
+			HttpEntity entity = response.getEntity();
+			inchi = EntityUtils.toString(entity);
+
+		} catch (ClientProtocolException ClientException) {
+			System.out.println(ClientException.getMessage());
+			ClientException.printStackTrace();
+		} catch (IOException IoException) {
+			System.out.println(IoException.getMessage());
+			IoException.printStackTrace();
+		} catch (Throwable throwable) {
+			  System.out.println(throwable.getMessage());
+			  throwable.printStackTrace();
+		}
+		inchi = inchi.replace("InChI=", "");
+		builder.append("<tr><td> Inchi<sup>1</sup>: </td><td>" + inchi + "</td></tr>");
+	}
+		
+	public void InchiKey(){
+		//Inchi Key
+		String inchiKey = null;
+		try {
+		//Set up connection and put InChI key into a string
+			HttpClient httpclient = new DefaultHttpClient();
+			HttpGet getInchiKey = new HttpGet("http://cactus.nci.nih.gov/chemical/structure/" 
+					+ smiles + "/stdinchikey");
+
+			HttpResponse response = null;
+			response = httpclient.execute(getInchiKey);
+
+			HttpEntity entity = response.getEntity();
+			inchiKey = EntityUtils.toString(entity);
+
+		} catch (ClientProtocolException ClientException) {
+			System.out.println(ClientException.getMessage());
+			ClientException.printStackTrace();
+		} catch (IOException IoException) {
+			System.out.println(IoException.getMessage());
+			IoException.printStackTrace();
+		} catch (Throwable throwable) {
+			  System.out.println(throwable.getMessage());
+			  throwable.printStackTrace();
+		}
+		inchiKey = inchiKey.replace("InChIKey=", "");
+		builder.append("<tr><td> Inchi Key<sup>1</sup>: </td><td>" + inchiKey + "</td></tr></table>");
+	}
+		
+	public void MSImages(){
+		//MS images
+		String urlLow = "http://www.hmdb.ca/labm/metabolites/" + HMDB + "/ms/spectra/" + HMDB + "L.png";
+		String urlMed = "http://www.hmdb.ca/labm/metabolites/" + HMDB + "/ms/spectraM/" + HMDB + "M.png";
+		String urlHigh = "http://www.hmdb.ca/labm/metabolites/" + HMDB + "/ms/spectraH/" + HMDB + "H.png";
+		
+		builder.append("<br /><h3> Mass spectroscopy images: </h3><p>");
+		builder.append("<a href=\"" + urlLow + "\"> Low energy MS image </a><br />");
+		builder.append("<a href=\"" + urlMed + "\"> Medium energy MS image </a><br />");
+		builder.append("<a href=\"" + urlHigh + "\"> High energy MS image </a><br /></p>");
+	}
+	
+	public void NMR(){
+		//NMR tables
+		System.out.println("builder before nmr: "+builder);
+		builder.append("<h3> NMR peak lists and images predicted by HMDB <sup>2</sup>: </h3>");
+		
+		//1H NMR predicted spectra
+		
+		//1H NMR spectrum image link
+		String H1NMRLink = "http://www.hmdb.ca/labm/metabolites/" + HMDB + 
+				"/chemical/pred_hnmr_spectrum/" + name + ".gif";
+		H1NMRLink = "<a href=\"" + H1NMRLink + "\"> Spectrum image </a><br /><br />";
+	
+		//1H NMR peak list
+		String H1NMR = null;
+		System.out.println("builder before nmr2: "+builder);
+		try {
+			System.out.println("builder in try: "+builder);
+		//Set up connection and put InChI key into a string
+			HttpClient httpclient = new DefaultHttpClient();
+			HttpGet getH1NMR = new HttpGet("http://www.hmdb.ca/labm/metabolites/"
+			+ HMDB + "/chemical/pred_hnmr_peaklist/" + HMDB + "_peaks.txt");
+
+			HttpResponse response = null;
+			response = httpclient.execute(getH1NMR);
+
+			HttpEntity entity = response.getEntity();
+			H1NMR = EntityUtils.toString(entity);
+			System.out.println("1: " + H1NMR);
+		} catch (ClientProtocolException ClientException) {
+			System.out.println("clientexception");
+			ClientException.printStackTrace();
+		} catch (IOException IoException) {
+			System.out.println("IOException");
+			IoException.printStackTrace();
+		} catch (Throwable throwable) {
+			  System.out.println("Throwable");
+			  throwable.printStackTrace();
+		}
+		H1NMR = H1NMR.replace("	", "</td><td>");
+		H1NMR = H1NMR.replace("\n", "</tr><tr>");
+		H1NMR = H1NMR.replace("<td></td>", "");
+		System.out.println("2: " + H1NMR);
+		H1NMR = "Peak list: <br /><table border=\"0\"><tr> " + H1NMR + "</tr></table>";
+		//TODO remove last column (the most right)
+		builder.append("<sup>1</sup>H NMR peak list and image predicted by HMDB<sup>2</sup>: <br />" +
+				H1NMRLink + H1NMR);
+		System.out.println("builder after 1h NMR"+builder);
+		
+		//13C NMR predicted spectra
+		
+		//13C NMR spectrum image
+		String C13NMRLink = "http://www.hmdb.ca/labm/metabolites/" + HMDB + 
+				"/chemical/pred_cnmr_spectrum/" + name + "_C.gif";
+		C13NMRLink = "<a href=\"" + C13NMRLink + "\"> Spectrum image </a><br /><br />";
+
+		//13C NMR peak list
+		String C13NMR = null;
+		try {
+		//Set up connection and put InChI key into a string
+			HttpClient httpclient = new DefaultHttpClient();
+			HttpGet getC13NMR = new HttpGet("http://www.hmdb.ca/labm/metabolites/"
+			+ HMDB + "/chemical/pred_cnmr_peaklist/" + HMDB + "_peaks.txt");
+			System.out.println("http://www.hmdb.ca/labm/metabolites/"
+			+ HMDB + "/chemical/pred_cnmr_peaklist/" + HMDB + "_peaks.txt");
+			HttpResponse response = null;
+			response = httpclient.execute(getC13NMR);
+
+			HttpEntity entity = response.getEntity();
+			C13NMR = EntityUtils.toString(entity);
+
+		} catch (ClientProtocolException ClientException) {
+			System.out.println(ClientException.getMessage());
+			ClientException.printStackTrace();
+		} catch (IOException IoException) {
+			System.out.println(IoException.getMessage());
+			IoException.printStackTrace();
+		} catch (Throwable throwable) {
+			  System.out.println(throwable.getMessage());
+			  throwable.printStackTrace();
+		}
+		C13NMR = C13NMR.replace("	", "</td><td>");
+		C13NMR = C13NMR.replace("\n", "</tr><tr>");
+		C13NMR = "Peak list: <br /><table border=\"0\"><tr> " + C13NMR + "</tr></table>";
+		//TODO remove last column (the most right)
+		builder.append("<br /> <sup>13</sup>C NMR peak list and image predicted by HMDB<sup>2</sup>: <br />" +
+				C13NMRLink + C13NMR + "</p>");
+	}
+	
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////GENERATE IATOMCONTAINER FOR METABOLITE/////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
