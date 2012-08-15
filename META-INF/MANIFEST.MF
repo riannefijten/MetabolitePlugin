@@ -12,14 +12,4 @@ Require-Bundle: org.pathvisio.desktop;bundle-version="2.0.11",
  org.apache.commons.codec;bundle-version="1.5.0",
  org.bridgedb;bundle-version="1.1.0",
  org.bridgedb.bio;bundle-version="1.1.0"
-Bundle-ClassPath: .,
- lib/cdk-1.4.9.jar,
- lib/commons-codec-1.6.jar,
- lib/commons-logging-1.1.1.jar,
- lib/fluent-hc-4.2.jar,
- lib/httpclient-4.2.jar,
- lib/httpclient-cache-4.2.jar,
- lib/httpcore-4.2.jar,
- lib/httpmime-4.2.jar,
- lib/org.apache.httpcomponents.httpclient_4.2.jar,
- library.jar
+
