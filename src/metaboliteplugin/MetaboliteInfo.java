@@ -226,11 +226,8 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 			}
 			
 			if (e.getDataNodeType().equals("Metabolite"))
-			{			
-		
-						
+			{						
 				String xref = e.getXref().getId();
-							
 				if (destrefs.size() < 1){
 					String str = "Please select a database";
 					return str;
@@ -300,18 +297,17 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 			HttpEntity entity = response.getEntity();
 			inchi = EntityUtils.toString(entity);
 
+			inchi = inchi.replace("InChI=", "");
+			builder.append("<tr><td> Inchi<sup>1</sup>: </td><td>" + inchi + "</td></tr>");
+			
 		} catch (ClientProtocolException ClientException) {
-			System.out.println(ClientException.getMessage());
-			ClientException.printStackTrace();
+			builder.append("<tr><td> Inchi<sup>1</sup>: </td><td> Unknown </td></tr>");
 		} catch (IOException IoException) {
-			System.out.println(IoException.getMessage());
-			IoException.printStackTrace();
+			builder.append("<tr><td> Inchi<sup>1</sup>: </td><td> Unknown </td></tr>");
 		} catch (Throwable throwable) {
-			  System.out.println(throwable.getMessage());
-			  throwable.printStackTrace();
+			builder.append("<tr><td> Inchi<sup>1</sup>: </td><td> Unknown </td></tr>");
 		}
-		inchi = inchi.replace("InChI=", "");
-		builder.append("<tr><td> Inchi<sup>1</sup>: </td><td>" + inchi + "</td></tr>");
+		
 	}
 		
 	public void InchiKey(){
@@ -329,18 +325,17 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 			HttpEntity entity = response.getEntity();
 			inchiKey = EntityUtils.toString(entity);
 
+			inchiKey = inchiKey.replace("InChIKey=", "");
+			builder.append("<tr><td> Inchi Key<sup>1</sup>: </td><td>" + inchiKey + "</td></tr></table>");
+			
 		} catch (ClientProtocolException ClientException) {
-			System.out.println(ClientException.getMessage());
-			ClientException.printStackTrace();
+			builder.append("<tr><td> Inchi<sup>1</sup>: </td><td> Unknown </td></tr>");
 		} catch (IOException IoException) {
-			System.out.println(IoException.getMessage());
-			IoException.printStackTrace();
+			builder.append("<tr><td> Inchi<sup>1</sup>: </td><td> Unknown </td></tr>");
 		} catch (Throwable throwable) {
-			  System.out.println(throwable.getMessage());
-			  throwable.printStackTrace();
+			builder.append("<tr><td> Inchi<sup>1</sup>: </td><td> Unknown </td></tr>");
 		}
-		inchiKey = inchiKey.replace("InChIKey=", "");
-		builder.append("<tr><td> Inchi Key<sup>1</sup>: </td><td>" + inchiKey + "</td></tr></table>");
+		
 	}
 		
 	public void MSImages(){
@@ -379,6 +374,16 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 
 			HttpEntity entity = response.getEntity();
 			H1NMR = EntityUtils.toString(entity);
+			if (H1NMR.startsWith("Group")){
+				H1NMR = H1NMR.replace("	", "</td><td>");
+				H1NMR = H1NMR.replace("\n", "</tr><tr>");
+				H1NMR = H1NMR.replace("<td></td>", "");
+				H1NMR = "Peak list: <br /><table border=\"0\"><tr> " + H1NMR + "</tr></table>";
+				//TODO remove last column (the most right)
+				builder.append("<p><sup>1</sup>H NMR peak list and image predicted by HMDB<sup>2</sup>: <br /></p>");
+				builder.append(H1NMRLink + H1NMR);
+			}
+			else {builder.append("<i>Peak list is not available</i>");}
 		} catch (ClientProtocolException ClientException) {
 			System.out.println("clientexception");
 			ClientException.printStackTrace();
@@ -389,13 +394,7 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 			  System.out.println("Throwable");
 			  throwable.printStackTrace();
 		}
-		H1NMR = H1NMR.replace("	", "</td><td>");
-		H1NMR = H1NMR.replace("\n", "</tr><tr>");
-		H1NMR = H1NMR.replace("<td></td>", "");
-		H1NMR = "Peak list: <br /><table border=\"0\"><tr> " + H1NMR + "</tr></table>";
-		//TODO remove last column (the most right)
-		builder.append("<sup>1</sup>H NMR peak list and image predicted by HMDB<sup>2</sup>: <br />" +
-				H1NMRLink + H1NMR);
+		
 		
 		//13C NMR predicted spectra
 		
@@ -416,6 +415,15 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 
 			HttpEntity entity = response.getEntity();
 			C13NMR = EntityUtils.toString(entity);
+			if (C13NMR.startsWith("Carbon")){
+				C13NMR = C13NMR.replace("	", "</td><td>");
+				C13NMR = C13NMR.replace("\n", "</tr><tr>");
+				C13NMR = "Peak list: <br /><table border=\"0\"><tr> " + C13NMR + "</tr></table>";
+				//TODO remove last column (the most right)
+				builder.append("<br /> <p><sup>13</sup>C NMR peak list and image predicted by HMDB<sup>2</sup>: <br /></p>");
+				builder.append(C13NMRLink + C13NMR);
+			}
+			else {builder.append("<i> Peak list could not be loaded</i>");}
 
 		} catch (ClientProtocolException ClientException) {
 			System.out.println(ClientException.getMessage());
@@ -427,12 +435,7 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 			  System.out.println(throwable.getMessage());
 			  throwable.printStackTrace();
 		}
-		C13NMR = C13NMR.replace("	", "</td><td>");
-		C13NMR = C13NMR.replace("\n", "</tr><tr>");
-		C13NMR = "Peak list: <br /><table border=\"0\"><tr> " + C13NMR + "</tr></table>";
-		//TODO remove last column (the most right)
-		builder.append("<br /> <sup>13</sup>C NMR peak list and image predicted by HMDB<sup>2</sup>: <br />" +
-				C13NMRLink + C13NMR + "</p>");
+		
 	}
 	
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -498,8 +501,7 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 							"</td><td>" + shift + "</td></tr>");
 										
 				} catch (Throwable e) {
-					System.out.println("Exception: " + e.getMessage());
-					e.printStackTrace();
+					builder.append("<tr><td colspan=3>" + e.getMessage() + "</td></tr>");
 				}
 			}
 //			prediction.setShiftsUsedForPrediction(PredictionList);
