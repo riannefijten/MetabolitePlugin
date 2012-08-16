@@ -214,14 +214,6 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 	private String name = null;
 	
 	public String getContent(PathwayElement e){
-		System.out.println(e);
-//		if (e == null) {
-//			System.out.println("e is null");
-//			 String str = "<p>No pathway element is selected.</p>";
-//			 return str;
-//		}
-//		else {
-			
 			builder.setLength(0);
 			Xref ref = e.getXref();
 			IDMapper gdb = gdbManager.getCurrentGdb();		
@@ -243,41 +235,47 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 					String str = "Please select a database";
 					return str;
 				}
-				
-				//TODO explain why nothing is shown when no database is selected.
+
 				try
 				{
 					HMDB = ref.getId(); //TODO assuming that the given id is an HMDB id
-					smiles = Utils.oneOf (
-							gdbManager.getCurrentGdb().getAttributes (Utils.oneOf(destrefs), "SMILES"));
-					String bruto = Utils.oneOf (
-							gdbManager.getCurrentGdb().getAttributes (Utils.oneOf(destrefs), "BrutoFormula"));
-					name = Utils.oneOf (
-							gdbManager.getCurrentGdb().getAttributes (Utils.oneOf(destrefs), "Symbol"));
-					builder.append("<h3> General info: </h3>");
-					builder.append("<table border=\"0\">");
-					builder.append("<tr><td>Name: </td><td>" + name + "</td></tr>");
-					builder.append("<tr><td>ID: </td><td>" + xref + "</td></tr>");
-					builder.append("<tr><td>Molecular formula: </td><td>" + bruto + "</td></tr>");
-					builder.append("<tr><td>SMILES: </td><td>" + smiles + "</td></tr>");
+					if (HMDB.startsWith("HMDB")){
+
+						smiles = Utils.oneOf (
+								gdbManager.getCurrentGdb().getAttributes (Utils.oneOf(destrefs), "SMILES"));
+						String bruto = Utils.oneOf (
+								gdbManager.getCurrentGdb().getAttributes (Utils.oneOf(destrefs), "BrutoFormula"));
+						name = Utils.oneOf (
+								gdbManager.getCurrentGdb().getAttributes (Utils.oneOf(destrefs), "Symbol"));
+						builder.append("<h3> General info: </h3>");
+						builder.append("<table border=\"0\">");
+						builder.append("<tr><td>Name: </td><td>" + name + "</td></tr>");
+						builder.append("<tr><td>ID: </td><td>" + xref + "</td></tr>");
+						builder.append("<tr><td>Molecular formula: </td><td>" + bruto + "</td></tr>");
+						builder.append("<tr><td>SMILES: </td><td>" + smiles + "</td></tr>");
+						
+						Inchi();
+						InchiKey();
+						MSImages();
+						NMR();
+						CreateAtomContainer(smiles);
+						
+						builder.append("<p> Databases used: <br />" +
+								"<sup>1</sup> <a href=\"http://cactus.nci.nih.gov/chemical/structure\"> Cactus Chemical Identifier Resolver </a><br />" +
+								"<sup>2</sup> <a href=\"http://www.hmdb.ca\"> HMDB database </a><br />" +
+								"<sup>3</sup> <a href=\"http://sourceforge.net/projects/cdk/\"> Chemistry Development Kit </a>");
+					}
+					else {
+						String str = "This plugin needs an HMDB ID to work";
+						return str;
+					}
 				}
 				catch (IDMapperException ex)
 				{
 					Logger.log.error ("while getting cross refs", ex);
 					System.out.println("IDMapperException");
 				}
-				Inchi();
-				InchiKey();
-				MSImages();
-				NMR();
-				CreateAtomContainer(smiles);
-				
-				
-				builder.append("<p> Databases used: <br />" +
-						"<sup>1</sup> <a href=\"http://cactus.nci.nih.gov/chemical/structure\"> Cactus Chemical Identifier Resolver </a><br />" +
-						"<sup>2</sup> <a href=\"http://www.hmdb.ca\"> HMDB database </a><br />" +
-						"<sup>3</sup> <a href=\"http://sourceforge.net/projects/cdk/\"> Chemistry Development Kit </a>");
-				return builder.toString();
+			return builder.toString();
 			}
 			
 			else {
