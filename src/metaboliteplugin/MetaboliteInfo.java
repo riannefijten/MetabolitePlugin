@@ -49,6 +49,7 @@ import org.pathvisio.core.view.SelectionBox.SelectionEvent;
 import org.pathvisio.core.view.SelectionBox.SelectionListener;
 import org.pathvisio.core.view.VPathway;
 import org.pathvisio.core.view.VPathwayElement;
+import org.pathvisio.desktop.PvDesktop;
 import org.pathvisio.gui.SwingEngine;
 
 
@@ -223,23 +224,27 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 			} catch (IDMapperException e1) {
 				// TODO Auto-generated catch block
 				e1.printStackTrace();
+				System.out.println("IDMapperException1");
 			}
 			
 			if (e.getDataNodeType().equals("Metabolite"))
-			{						
+			{		
+				System.out.println("database: " + se.getGdbManager().getMetaboliteDb());
 				String xref = e.getXref().getId();
-				if (destrefs.size() < 1){
-					String str = "Please select a database";
+				if (se.getGdbManager().getMetaboliteDb() == null){
+					String str = "Please select a metabolite database";
 					return str;
 				}
 
 				try
 				{
 					HMDB = ref.getId(); //TODO assuming that the given id is an HMDB id
+					
 					if (HMDB.startsWith("HMDB")){
-
+						System.out.println("ID: " + HMDB);
 						smiles = Utils.oneOf (
 								gdbManager.getCurrentGdb().getAttributes (Utils.oneOf(destrefs), "SMILES"));
+						
 						String bruto = Utils.oneOf (
 								gdbManager.getCurrentGdb().getAttributes (Utils.oneOf(destrefs), "BrutoFormula"));
 						name = Utils.oneOf (
@@ -267,10 +272,11 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 						return str;
 					}
 				}
-				catch (IDMapperException ex)
+				catch (Throwable ex)
 				{
-					Logger.log.error ("while getting cross refs", ex);
-					System.out.println("IDMapperException");
+					System.out.println("Throwable");
+					String str = "This HMDB ID was not recognized";
+					return str;
 				}
 			return builder.toString();
 			}
