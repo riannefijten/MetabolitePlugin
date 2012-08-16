@@ -7,7 +7,8 @@
   <property name="base.name" value="org.pathvisio.metaboliteinfo"/>
   <property name="jar.name" value="${base.name}.jar"/>
   <property name="pathvisio.dir" value="../../pathvisio"/>
-
+	<property name="bundle.dest" value="dist"/>
+	
 	<path id="project.class.path">
 		<fileset dir="${pathvisio.dir}/modules">
 			<include name="**/*.jar"/>
@@ -50,19 +51,25 @@
   </target>
   
 	<target name="jar" depends="build"> 
+		<mkdir dir="${bundle.dest}"/>
+		<copy file="commons-codec-1.5.jar" toDir="${bundle.dest}" flatten="true"/>
 		<unjar src="lib/cdk-1.4.9.jar" dest="build"/>
 		<unjar src="lib/fluent-hc-4.2.jar" dest="build"/>
 		<unjar src="lib/httpclient-4.2.jar" dest="build"/>
 		<unjar src="lib/httpclient-cache-4.2.jar" dest="build"/>
 		<unjar src="lib/httpcore-4.2.jar" dest="build"/>
 		<unjar src="lib/httpmime-4.2.jar" dest="build"/>
+		<unjar src="commons-codec-1.5.jar" dest="build"/>
 		<unjar src="lib/org.apache.httpcomponents.httpclient_4.2.jar" dest="build"/>
 		<echo>Creating JAR: ${jar.name}</echo>
-		<jar jarfile="${jar.name}" basedir="build" manifest="META-INF/MANIFEST.MF" />
+		<jar jarfile="${bundle.dest}/${jar.name}" basedir="build" manifest="META-INF/MANIFEST.MF"  />
+		
+		
 	</target>
 
   <target name="clean">
 	<delete dir="build"/>
+  	<delete dir="${bundle.dest}"/>
   </target>
 
   <target name="dist-clean" depends="clean">

@@ -114,9 +114,9 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 		//Remove pathwaylistener from old input
 		if(input != null) input.removeListener(this);
 		
-		if(e == null || e.getObjectType() != ObjectType.DATANODE) {
+		if(e == null /*|| e.getObjectType() != ObjectType.DATANODE*/) {
 			input = null;
-			
+			setText("<p>No pathway element is selected.</p>");
 		} 
 		else {
 			input = e;
@@ -214,70 +214,77 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 	private String name = null;
 	
 	public String getContent(PathwayElement e){
+		System.out.println(e);
+//		if (e == null) {
+//			System.out.println("e is null");
+//			 String str = "<p>No pathway element is selected.</p>";
+//			 return str;
+//		}
+//		else {
+			
+			builder.setLength(0);
+			Xref ref = e.getXref();
+			IDMapper gdb = gdbManager.getCurrentGdb();		
+			Set<Xref> destrefs = null;
+			try {
+				destrefs = gdb.mapID(ref, BioDataSource.HMDB);
+			} catch (IDMapperException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+			
+			if (e.getDataNodeType().equals("Metabolite"))
+			{			
 		
-		builder.setLength(0);
-		Xref ref = e.getXref();
-		IDMapper gdb = gdbManager.getCurrentGdb();		
-		Set<Xref> destrefs = null;
-		try {
-			destrefs = gdb.mapID(ref, BioDataSource.HMDB);
-		} catch (IDMapperException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		}
-		
-		if (e.getDataNodeType().equals("Metabolite"))
-		{			
-	
-					
-			String xref = e.getXref().getId();
 						
-			if (destrefs.size() < 1){
-				String str = "Please select a database";
+				String xref = e.getXref().getId();
+							
+				if (destrefs.size() < 1){
+					String str = "Please select a database";
+					return str;
+				}
+				
+				//TODO explain why nothing is shown when no database is selected.
+				try
+				{
+					HMDB = ref.getId(); //TODO assuming that the given id is an HMDB id
+					smiles = Utils.oneOf (
+							gdbManager.getCurrentGdb().getAttributes (Utils.oneOf(destrefs), "SMILES"));
+					String bruto = Utils.oneOf (
+							gdbManager.getCurrentGdb().getAttributes (Utils.oneOf(destrefs), "BrutoFormula"));
+					name = Utils.oneOf (
+							gdbManager.getCurrentGdb().getAttributes (Utils.oneOf(destrefs), "Symbol"));
+					builder.append("<h3> General info: </h3>");
+					builder.append("<table border=\"0\">");
+					builder.append("<tr><td>Name: </td><td>" + name + "</td></tr>");
+					builder.append("<tr><td>ID: </td><td>" + xref + "</td></tr>");
+					builder.append("<tr><td>Molecular formula: </td><td>" + bruto + "</td></tr>");
+					builder.append("<tr><td>SMILES: </td><td>" + smiles + "</td></tr>");
+				}
+				catch (IDMapperException ex)
+				{
+					Logger.log.error ("while getting cross refs", ex);
+					System.out.println("IDMapperException");
+				}
+				Inchi();
+				InchiKey();
+				MSImages();
+				NMR();
+				CreateAtomContainer(smiles);
+				
+				
+				builder.append("<p> Databases used: <br />" +
+						"<sup>1</sup> <a href=\"http://cactus.nci.nih.gov/chemical/structure\"> Cactus Chemical Identifier Resolver </a><br />" +
+						"<sup>2</sup> <a href=\"http://www.hmdb.ca\"> HMDB database </a><br />" +
+						"<sup>3</sup> <a href=\"http://sourceforge.net/projects/cdk/\"> Chemistry Development Kit </a>");
+				return builder.toString();
+			}
+			
+			else {
+				String str = "The plugin only works for metabolites";
 				return str;
 			}
-			
-			//TODO explain why nothing is shown when no database is selected.
-			try
-			{
-				HMDB = ref.getId(); //TODO assuming that the given id is an HMDB id
-				smiles = Utils.oneOf (
-						gdbManager.getCurrentGdb().getAttributes (Utils.oneOf(destrefs), "SMILES"));
-				String bruto = Utils.oneOf (
-						gdbManager.getCurrentGdb().getAttributes (Utils.oneOf(destrefs), "BrutoFormula"));
-				name = Utils.oneOf (
-						gdbManager.getCurrentGdb().getAttributes (Utils.oneOf(destrefs), "Symbol"));
-				builder.append("<h3> General info: </h3>");
-				builder.append("<table border=\"0\">");
-				builder.append("<tr><td>Name: </td><td>" + name + "</td></tr>");
-				builder.append("<tr><td>ID: </td><td>" + xref + "</td></tr>");
-				builder.append("<tr><td>Molecular formula: </td><td>" + bruto + "</td></tr>");
-				builder.append("<tr><td>SMILES: </td><td>" + smiles + "</td></tr>");
-			}
-			catch (IDMapperException ex)
-			{
-				Logger.log.error ("while getting cross refs", ex);
-				System.out.println("IDMapperException");
-			}
-			System.out.println("builder after nmr: "+builder);
-			Inchi();
-			InchiKey();
-			MSImages();
-			NMR();
-			CreateAtomContainer(smiles);
-			
-			
-			builder.append("<p> Databases used: <br />" +
-					"<sup>1</sup> <a href=\"http://cactus.nci.nih.gov/chemical/structure\"> Cactus Chemical Identifier Resolver </a><br />" +
-					"<sup>2</sup> <a href=\"http://www.hmdb.ca\"> HMDB database </a><br />" +
-					"<sup>3</sup> <a href=\"http://sourceforge.net/projects/cdk/\"> Chemistry Development Kit </a>");
-			return builder.toString();
-		}
-		
-		else {
-			String str = "The plugin only works for metabolites";
-			return str;
-		}
+//		}
 	}
 				
 	public void Inchi(){
@@ -352,7 +359,6 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 	
 	public void NMR(){
 		//NMR tables
-		System.out.println("builder before nmr: "+builder);
 		builder.append("<h3> NMR peak lists and images predicted by HMDB <sup>2</sup>: </h3>");
 		
 		//1H NMR predicted spectra
@@ -364,9 +370,7 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 	
 		//1H NMR peak list
 		String H1NMR = null;
-		System.out.println("builder before nmr2: "+builder);
 		try {
-			System.out.println("builder in try: "+builder);
 		//Set up connection and put InChI key into a string
 			HttpClient httpclient = new DefaultHttpClient();
 			HttpGet getH1NMR = new HttpGet("http://www.hmdb.ca/labm/metabolites/"
@@ -377,7 +381,6 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 
 			HttpEntity entity = response.getEntity();
 			H1NMR = EntityUtils.toString(entity);
-			System.out.println("1: " + H1NMR);
 		} catch (ClientProtocolException ClientException) {
 			System.out.println("clientexception");
 			ClientException.printStackTrace();
@@ -391,12 +394,10 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 		H1NMR = H1NMR.replace("	", "</td><td>");
 		H1NMR = H1NMR.replace("\n", "</tr><tr>");
 		H1NMR = H1NMR.replace("<td></td>", "");
-		System.out.println("2: " + H1NMR);
 		H1NMR = "Peak list: <br /><table border=\"0\"><tr> " + H1NMR + "</tr></table>";
 		//TODO remove last column (the most right)
 		builder.append("<sup>1</sup>H NMR peak list and image predicted by HMDB<sup>2</sup>: <br />" +
 				H1NMRLink + H1NMR);
-		System.out.println("builder after 1h NMR"+builder);
 		
 		//13C NMR predicted spectra
 		
@@ -411,8 +412,6 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 		//Set up connection and put InChI key into a string
 			HttpClient httpclient = new DefaultHttpClient();
 			HttpGet getC13NMR = new HttpGet("http://www.hmdb.ca/labm/metabolites/"
-			+ HMDB + "/chemical/pred_cnmr_peaklist/" + HMDB + "_peaks.txt");
-			System.out.println("http://www.hmdb.ca/labm/metabolites/"
 			+ HMDB + "/chemical/pred_cnmr_peaklist/" + HMDB + "_peaks.txt");
 			HttpResponse response = null;
 			response = httpclient.execute(getC13NMR);
@@ -489,7 +488,6 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 					hoseCode = hcg.makeBremserCompliant(hoseCode);
 					shift = predictor.predict(hoseCode);
 
-					System.out.println("shift: "+shift);
 					List<IAtom> neighborList = mc.getConnectedAtomsList(atom);
 					StringBuilder C = new StringBuilder();
 					
@@ -508,7 +506,6 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 			}
 //			prediction.setShiftsUsedForPrediction(PredictionList);
 		}
-		System.out.println(data);
 		builder.append("</table>");
 	}
 
