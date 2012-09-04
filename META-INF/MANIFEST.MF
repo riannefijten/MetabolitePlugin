@@ -11,5 +11,7 @@ Require-Bundle: org.pathvisio.desktop;bundle-version="2.0.11",
  com.springsource.org.apache.commons.logging;bundle-version="1.1.1",
  org.apache.commons.codec;bundle-version="1.5.0",
  org.bridgedb;bundle-version="1.1.0",
- org.bridgedb.bio;bundle-version="1.1.0"
+ org.bridgedb.bio;bundle-version="1.1.0",
+ org.bridgedb.rdb;bundle-version="1.1.0",
+ org.bridgedb.rdb.construct;bundle-version="1.1.0"
 

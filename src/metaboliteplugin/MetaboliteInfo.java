@@ -15,6 +15,8 @@ import javax.swing.JEditorPane;
 import javax.swing.SwingUtilities;
 import javax.swing.text.html.HTMLEditorKit;
 
+import net.sf.jniinchi.INCHI_RET;
+
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.ClientProtocolException;
@@ -27,13 +29,18 @@ import org.bridgedb.IDMapperException;
 import org.bridgedb.Xref;
 import org.bridgedb.bio.BioDataSource;
 import org.openscience.cdk.DefaultChemObjectBuilder;
+import org.openscience.cdk.exception.CDKException;
+import org.openscience.cdk.inchi.InChIGenerator;
+import org.openscience.cdk.inchi.InChIGeneratorFactory;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
+import org.openscience.cdk.interfaces.IMolecularFormula;
 import org.openscience.cdk.smiles.SmilesParser;
 import org.openscience.cdk.tools.BremserOneSphereHOSECodePredictor;
 import org.openscience.cdk.tools.CDKHydrogenAdder;
 import org.openscience.cdk.tools.HOSECodeGenerator;
 import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
+import org.openscience.cdk.tools.manipulator.MolecularFormulaManipulator;
 import org.pathvisio.core.ApplicationEvent;
 import org.pathvisio.core.Engine;
 import org.pathvisio.core.Engine.ApplicationEventListener;
@@ -244,24 +251,23 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 						System.out.println("ID: " + HMDB);
 						smiles = Utils.oneOf (
 								gdbManager.getCurrentGdb().getAttributes (Utils.oneOf(destrefs), "SMILES"));
-						
-						String bruto = Utils.oneOf (
-								gdbManager.getCurrentGdb().getAttributes (Utils.oneOf(destrefs), "BrutoFormula"));
 						name = Utils.oneOf (
 								gdbManager.getCurrentGdb().getAttributes (Utils.oneOf(destrefs), "Symbol"));
 						builder.append("<h3> General info: </h3>");
 						builder.append("<table border=\"0\">");
 						builder.append("<tr><td>Name: </td><td>" + name + "</td></tr>");
 						builder.append("<tr><td>ID: </td><td>" + xref + "</td></tr>");
-						builder.append("<tr><td>Molecular formula: </td><td>" + bruto + "</td></tr>");
 						builder.append("<tr><td>SMILES: </td><td>" + smiles + "</td></tr>");
-						
+
+						//Execute other methods to get their content
+						CreateAtomContainer(smiles);
+						CDKInfo();
 						Inchi();
-						InchiKey();
 						MSImages();
 						NMR();
-						CreateAtomContainer(smiles);
+						HOSEGenerator(molecule);
 						
+						//Add databases that were used.
 						builder.append("<p> Databases used: <br />" +
 								"<sup>1</sup> <a href=\"http://cactus.nci.nih.gov/chemical/structure\"> Cactus Chemical Identifier Resolver </a><br />" +
 								"<sup>2</sup> <a href=\"http://www.hmdb.ca\"> HMDB database </a><br />" +
@@ -272,9 +278,11 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 						return str;
 					}
 				}
-				catch (Throwable ex)
+				catch (IDMapperException ex)
 				{
-					System.out.println("Throwable");
+					System.out.println(ex.getMessage());
+					System.out.println("IDMapperException");
+					ex.printStackTrace();
 					String str = "This HMDB ID was not recognized";
 					return str;
 				}
@@ -285,64 +293,41 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 				String str = "The plugin only works for metabolites";
 				return str;
 			}
-//		}
+	}
+	public void CDKInfo(){
+		IMolecularFormula molForm = MolecularFormulaManipulator.getMolecularFormula(molecule);
+		String mf = MolecularFormulaManipulator.getString(molForm);
+		System.out.println(mf);
+		builder.append("<tr><td>Molecular formula: </td><td>" + mf + "</td></tr>");
+
 	}
 				
 	public void Inchi(){
-		//Inchi			
-		String inchi = null;
+		InChIGeneratorFactory factory = null;
+		InChIGenerator generator = null;
+		System.out.println("inchi 1");
 		try {
-		//Set up connection and put InChI key into a string
-			HttpClient httpclient = new DefaultHttpClient();
-			HttpGet getInchi = new HttpGet("http://cactus.nci.nih.gov/chemical/structure/"
-			+ smiles + "/stdinchi");
+			System.out.println("testinchi");
+			generator = factory.getInChIGenerator(molecule);
+			System.out.println(generator.getLog());
 
-			HttpResponse response = null;
-			response = httpclient.execute(getInchi);
+			String InChI = generator.getInchi().toString();
+			String InChIKey = generator.getInchiKey().toString();
+			System.out.println("inchi 2");
+//			System.out.println(generator.getInchi());
+			builder.append("<tr><td> InChI<sup>1</sup>: </td><td>" + InChI + "</td></tr>");
+//			System.out.println("inchi 3");
+			builder.append("<tr><td> InChI<sup>1</sup>: </td><td>" + InChIKey + "</td></tr>");
+//			System.out.println("inchi 4");
 
-			HttpEntity entity = response.getEntity();
-			inchi = EntityUtils.toString(entity);
-
-			inchi = inchi.replace("InChI=", "");
-			builder.append("<tr><td> Inchi<sup>1</sup>: </td><td>" + inchi + "</td></tr>");
-			
-		} catch (ClientProtocolException ClientException) {
-			builder.append("<tr><td> Inchi<sup>1</sup>: </td><td> Unknown </td></tr>");
-		} catch (IOException IoException) {
-			builder.append("<tr><td> Inchi<sup>1</sup>: </td><td> Unknown </td></tr>");
-		} catch (Throwable throwable) {
-			builder.append("<tr><td> Inchi<sup>1</sup>: </td><td> Unknown </td></tr>");
+		} catch (CDKException e) {
+				builder.append("<tr><td> InChI<sup>1</sup>: </td><td> NA </td></tr>");
+				builder.append("<tr><td> InChI Key<sup>1</sup>: </td><td> NA </td></tr>");
+				System.out.println("inchi NA");
 		}
-		
 	}
-		
-	public void InchiKey(){
-		//Inchi Key
-		String inchiKey = null;
-		try {
-		//Set up connection and put InChI key into a string
-			HttpClient httpclient = new DefaultHttpClient();
-			HttpGet getInchiKey = new HttpGet("http://cactus.nci.nih.gov/chemical/structure/" 
-					+ smiles + "/stdinchikey");
 
-			HttpResponse response = null;
-			response = httpclient.execute(getInchiKey);
 
-			HttpEntity entity = response.getEntity();
-			inchiKey = EntityUtils.toString(entity);
-
-			inchiKey = inchiKey.replace("InChIKey=", "");
-			builder.append("<tr><td> Inchi Key<sup>1</sup>: </td><td>" + inchiKey + "</td></tr></table>");
-			
-		} catch (ClientProtocolException ClientException) {
-			builder.append("<tr><td> Inchi<sup>1</sup>: </td><td> Unknown </td></tr>");
-		} catch (IOException IoException) {
-			builder.append("<tr><td> Inchi<sup>1</sup>: </td><td> Unknown </td></tr>");
-		} catch (Throwable throwable) {
-			builder.append("<tr><td> Inchi<sup>1</sup>: </td><td> Unknown </td></tr>");
-		}
-		
-	}
 		
 	public void MSImages(){
 		//MS images
@@ -350,7 +335,7 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 		String urlMed = "http://www.hmdb.ca/labm/metabolites/" + HMDB + "/ms/spectraM/" + HMDB + "M.png";
 		String urlHigh = "http://www.hmdb.ca/labm/metabolites/" + HMDB + "/ms/spectraH/" + HMDB + "H.png";
 		
-		builder.append("<br /><h3> Mass spectroscopy images: </h3><p>");
+		builder.append("<br /><h3> Mass spectrometry images: </h3><p>");
 		builder.append("<a href=\"" + urlLow + "\"> Low energy MS image </a><br />");
 		builder.append("<a href=\"" + urlMed + "\"> Medium energy MS image </a><br />");
 		builder.append("<a href=\"" + urlHigh + "\"> High energy MS image </a><br /></p>");
@@ -397,7 +382,8 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 			System.out.println("IOException");
 			IoException.printStackTrace();
 		} catch (Throwable throwable) {
-			  System.out.println("Throwable");
+			System.out.println(throwable.getMessage());
+			  System.out.println("Throwableblabla");
 			  throwable.printStackTrace();
 		}
 		
@@ -447,18 +433,17 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////GENERATE IATOMCONTAINER FOR METABOLITE/////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
+	IAtomContainer molecule;
 	private void CreateAtomContainer(String sm) {
 		String text = sm;
 		try
 		{
 			SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
-			IAtomContainer molecule = sp.parseSmiles(text);
+			molecule = sp.parseSmiles(text);
 			CDKHydrogenAdder adder = CDKHydrogenAdder.getInstance(
 					DefaultChemObjectBuilder.getInstance());
 			adder.addImplicitHydrogens(molecule);
 			AtomContainerManipulator.convertImplicitToExplicitHydrogens(molecule);
-			HOSEGenerator(molecule);	
 		}
 		catch (Exception e)
 		{
@@ -487,30 +472,30 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 		StringBuilder All = new StringBuilder();
 		for (int f = 0; f < mc.getAtomCount(); f++) {
 			IAtom atom = mc.getAtom(f);
-			
+			StringBuilder C = new StringBuilder();
+			int g = f+1;
 			
 			if (atom.getSymbol().equals("C")) {
 				try {
 					hoseCode = hcg.getHOSECode(mc, mc.getAtom(f), 1);
 					hoseCode = hcg.makeBremserCompliant(hoseCode);
+					System.out.println(hoseCode);
 					shift = predictor.predict(hoseCode);
 
 					List<IAtom> neighborList = mc.getConnectedAtomsList(atom);
-					StringBuilder C = new StringBuilder();
 					
 					for (int i = 0; i < neighborList.size(); i++){
 						IAtom neighbor= neighborList.get(i);
 						C.append(neighbor.getSymbol());
 					}
-					int g = f+1;
 					builder.append("<tr><td>" + g + "</td><td>" + C.toString() + 
 							"</td><td>" + shift + "</td></tr>");
 										
 				} catch (Throwable e) {
-					builder.append("<tr><td colspan=3>" + e.getMessage() + "</td></tr>");
+					builder.append("<tr><td>" + g + "</td><td>" + C.toString() + 
+							"</td><td>NA</td></tr>");
 				}
 			}
-//			prediction.setShiftsUsedForPrediction(PredictionList);
 		}
 		builder.append("</table>");
 	}
