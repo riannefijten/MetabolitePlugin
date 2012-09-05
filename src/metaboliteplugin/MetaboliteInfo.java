@@ -16,6 +16,12 @@ import javax.swing.SwingUtilities;
 import javax.swing.text.html.HTMLEditorKit;
 
 import net.sf.jniinchi.INCHI_RET;
+import net.sf.jniinchi.JniInchiAtom;
+import net.sf.jniinchi.JniInchiBond;
+import net.sf.jniinchi.JniInchiException;
+import net.sf.jniinchi.JniInchiInput;
+import net.sf.jniinchi.JniInchiOutput;
+import net.sf.jniinchi.JniInchiStructure;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -302,29 +308,13 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 
 	}
 				
-	public void Inchi(){
-		InChIGeneratorFactory factory = null;
-		InChIGenerator generator = null;
-		System.out.println("inchi 1");
-		try {
-			System.out.println("testinchi");
-			generator = factory.getInChIGenerator(molecule);
-			System.out.println(generator.getLog());
-
-			String InChI = generator.getInchi().toString();
-			String InChIKey = generator.getInchiKey().toString();
-			System.out.println("inchi 2");
-//			System.out.println(generator.getInchi());
-			builder.append("<tr><td> InChI<sup>1</sup>: </td><td>" + InChI + "</td></tr>");
-//			System.out.println("inchi 3");
-			builder.append("<tr><td> InChI<sup>1</sup>: </td><td>" + InChIKey + "</td></tr>");
-//			System.out.println("inchi 4");
-
-		} catch (CDKException e) {
-				builder.append("<tr><td> InChI<sup>1</sup>: </td><td> NA </td></tr>");
-				builder.append("<tr><td> InChI Key<sup>1</sup>: </td><td> NA </td></tr>");
-				System.out.println("inchi NA");
-		}
+	public void Inchi() {
+//		InChIGeneratorFactory factory = null;
+//		InChIGenerator generator = null;
+//		System.out.println("inchi 1");
+		JniInchiInput input = new JniInchiInput();
+		System.out.println(input);
+		
 	}
 
 
