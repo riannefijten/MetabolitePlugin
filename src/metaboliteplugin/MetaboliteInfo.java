@@ -234,6 +234,9 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 			Set<Xref> destrefs = null;
 			try {
 				destrefs = gdb.mapID(ref, BioDataSource.HMDB);
+				HMDB = destrefs.toString();
+				HMDB = HMDB.replace("[Ch:","");
+				HMDB = HMDB.replace("]", "");
 			} catch (IDMapperException e1) {
 				// TODO Auto-generated catch block
 				e1.printStackTrace();
@@ -242,8 +245,6 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 			
 			if (e.getDataNodeType().equals("Metabolite"))
 			{		
-				System.out.println("database: " + se.getGdbManager().getMetaboliteDb());
-				String xref = e.getXref().getId();
 				if (se.getGdbManager().getMetaboliteDb() == null){
 					String str = "Please select a metabolite database";
 					return str;
@@ -251,38 +252,29 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 
 				try
 				{
-					HMDB = ref.getId(); //TODO assuming that the given id is an HMDB id
-					
-					if (HMDB.startsWith("HMDB")){
-						System.out.println("ID: " + HMDB);
-						smiles = Utils.oneOf (
-								gdbManager.getCurrentGdb().getAttributes (Utils.oneOf(destrefs), "SMILES"));
-						name = Utils.oneOf (
-								gdbManager.getCurrentGdb().getAttributes (Utils.oneOf(destrefs), "Symbol"));
-						builder.append("<h3> General info: </h3>");
-						builder.append("<table border=\"0\">");
-						builder.append("<tr><td>Name: </td><td>" + name + "</td></tr>");
-						builder.append("<tr><td>ID: </td><td>" + xref + "</td></tr>");
-						builder.append("<tr><td>SMILES: </td><td>" + smiles + "</td></tr>");
+					smiles = Utils.oneOf (
+							gdbManager.getCurrentGdb().getAttributes (Utils.oneOf(destrefs), "SMILES"));
+					name = Utils.oneOf (
+							gdbManager.getCurrentGdb().getAttributes (Utils.oneOf(destrefs), "Symbol"));
+					builder.append("<h3> General info: </h3>");
+					builder.append("<table border=\"0\">");
+					builder.append("<tr><td>Name: </td><td>" + name + "</td></tr>");
+					builder.append("<tr><td>ID: </td><td>" + HMDB + "</td></tr>");
+					builder.append("<tr><td>SMILES: </td><td>" + smiles + "</td></tr>");
 
-						//Execute other methods to get their content
-						CreateAtomContainer(smiles);
-						CDKInfo();
-						Inchi();
-						MSImages();
-						NMR();
-						HOSEGenerator(molecule);
-						
-						//Add databases that were used.
-						builder.append("<p> Databases used: <br />" +
-								"<sup>1</sup> <a href=\"http://cactus.nci.nih.gov/chemical/structure\"> Cactus Chemical Identifier Resolver </a><br />" +
-								"<sup>2</sup> <a href=\"http://www.hmdb.ca\"> HMDB database </a><br />" +
-								"<sup>3</sup> <a href=\"http://sourceforge.net/projects/cdk/\"> Chemistry Development Kit </a>");
-					}
-					else {
-						String str = "This plugin needs an HMDB ID to work";
-						return str;
-					}
+					//Execute other methods to get their content
+					CreateAtomContainer(smiles);
+					CDKInfo();
+					Inchi();
+					MSImages();
+					NMR();
+					HOSEGenerator(molecule);
+					
+					//Add databases that were used.
+					builder.append("<p> Databases used: <br />" +
+							"<sup>1</sup> <a href=\"http://cactus.nci.nih.gov/chemical/structure\"> Cactus Chemical Identifier Resolver </a><br />" +
+							"<sup>2</sup> <a href=\"http://www.hmdb.ca\"> HMDB database </a><br />" +
+							"<sup>3</sup> <a href=\"http://sourceforge.net/projects/cdk/\"> Chemistry Development Kit </a>");
 				}
 				catch (IDMapperException ex)
 				{
@@ -339,7 +331,7 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 		
 		//1H NMR spectrum image link
 		String H1NMRLink = "http://www.hmdb.ca/labm/metabolites/" + HMDB + 
-				"/chemical/pred_hnmr_spectrum/" + name + ".gif";
+				"/chemical/pred_hnmr_spectrum/";
 		H1NMRLink = "<a href=\"" + H1NMRLink + "\"> Spectrum image </a><br /><br />";
 	
 		//1H NMR peak list
@@ -382,7 +374,7 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 		
 		//13C NMR spectrum image
 		String C13NMRLink = "http://www.hmdb.ca/labm/metabolites/" + HMDB + 
-				"/chemical/pred_cnmr_spectrum/" + name + "_C.gif";
+				"/chemical/pred_cnmr_spectrum/";
 		C13NMRLink = "<a href=\"" + C13NMRLink + "\"> Spectrum image </a><br /><br />";
 
 		//13C NMR peak list
