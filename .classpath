@@ -3,7 +3,6 @@
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.6"/>
 	<classpathentry kind="con" path="org.eclipse.pde.core.requiredPlugins"/>
 	<classpathentry kind="src" path="src"/>
-	<classpathentry kind="lib" path="lib/cdk-1.4.9.jar"/>
 	<classpathentry kind="lib" path="lib/commons-codec-1.6.jar"/>
 	<classpathentry kind="lib" path="lib/commons-logging-1.1.1.jar"/>
 	<classpathentry kind="lib" path="lib/fluent-hc-4.2.jar"/>
@@ -13,5 +12,16 @@
 	<classpathentry kind="lib" path="lib/httpmime-4.2.jar"/>
 	<classpathentry kind="lib" path="lib/org.apache.httpcomponents.httpclient_4.2.jar"/>
 	<classpathentry kind="lib" path="lib/jni-inchi-0.9-SNAPSHOT.jar"/>
+	<classpathentry kind="lib" path="lib/org.openscience.cdk.core_1.5.2.git1_cdk-152-2.jar"/>
+	<classpathentry kind="lib" path="lib/org.openscience.cdk.inchi_1.5.2.git1_cdk-152-2.jar"/>
+	<classpathentry kind="lib" path="lib/org.openscience.cdk.interfaces_1.5.2.git1_cdk-152-2.jar"/>
+	<classpathentry kind="lib" path="lib/org.openscience.cdk.io_1.5.2.git1_cdk-152-2.jar"/>
+	<classpathentry kind="lib" path="lib/org.openscience.cdk.ioformats_1.5.2.git1_cdk-152-2.jar"/>
+	<classpathentry kind="lib" path="lib/org.openscience.cdk.silent_1.5.2.git1_cdk-152-2.jar"/>
+	<classpathentry kind="lib" path="lib/org.openscience.cdk.standard_1.5.2.git1_cdk-152-2.jar"/>
+	<classpathentry kind="lib" path="lib/org.openscience.cdk.smiles_1.5.2.git1_cdk-152-2.jar"/>
+	<classpathentry kind="lib" path="lib/org.openscience.cdk.extra_1.5.2.git1_cdk-152-2.jar"/>
+	<classpathentry kind="lib" path="lib/org.openscience.cdk.valencycheck_1.5.2.git1_cdk-152-2.jar"/>
+	<classpathentry kind="lib" path="lib/org.openscience.cdk.formula_1.5.2.git1_cdk-152-2.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

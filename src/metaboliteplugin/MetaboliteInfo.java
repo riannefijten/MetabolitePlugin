@@ -4,7 +4,6 @@
 
 package metaboliteplugin;
 
-import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -15,32 +14,16 @@ import javax.swing.JEditorPane;
 import javax.swing.SwingUtilities;
 import javax.swing.text.html.HTMLEditorKit;
 
-import net.sf.jniinchi.INCHI_RET;
-import net.sf.jniinchi.JniInchiAtom;
-import net.sf.jniinchi.JniInchiBond;
-import net.sf.jniinchi.JniInchiException;
 import net.sf.jniinchi.JniInchiInput;
-import net.sf.jniinchi.JniInchiOutput;
-import net.sf.jniinchi.JniInchiStructure;
 
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.ClientProtocolException;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.util.EntityUtils;
 import org.bridgedb.IDMapper;
 import org.bridgedb.IDMapperException;
 import org.bridgedb.Xref;
 import org.bridgedb.bio.BioDataSource;
-import org.openscience.cdk.DefaultChemObjectBuilder;
-import org.openscience.cdk.exception.CDKException;
-import org.openscience.cdk.inchi.InChIGenerator;
-import org.openscience.cdk.inchi.InChIGeneratorFactory;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IMolecularFormula;
+import org.openscience.cdk.silent.SilentChemObjectBuilder;
 import org.openscience.cdk.smiles.SmilesParser;
 import org.openscience.cdk.tools.BremserOneSphereHOSECodePredictor;
 import org.openscience.cdk.tools.CDKHydrogenAdder;
@@ -52,7 +35,6 @@ import org.pathvisio.core.Engine;
 import org.pathvisio.core.Engine.ApplicationEventListener;
 import org.pathvisio.core.data.GdbManager;
 import org.pathvisio.core.debug.Logger;
-import org.pathvisio.core.model.ObjectType;
 import org.pathvisio.core.model.PathwayElement;
 import org.pathvisio.core.model.PathwayElementEvent;
 import org.pathvisio.core.model.PathwayElementListener;
@@ -62,7 +44,6 @@ import org.pathvisio.core.view.SelectionBox.SelectionEvent;
 import org.pathvisio.core.view.SelectionBox.SelectionListener;
 import org.pathvisio.core.view.VPathway;
 import org.pathvisio.core.view.VPathwayElement;
-import org.pathvisio.desktop.PvDesktop;
 import org.pathvisio.gui.SwingEngine;
 
 
@@ -130,7 +111,7 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 		
 		if(e == null /*|| e.getObjectType() != ObjectType.DATANODE*/) {
 			input = null;
-			setText("<p>No pathway element is selected.</p>");
+			setText("<p>No pathway element blablabla is selected.</p>");
 		} 
 		else {
 			input = e;
@@ -267,7 +248,7 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 					CDKInfo();
 					Inchi();
 					MSImages();
-					NMR();
+//					NMR();
 					HOSEGenerator(molecule);
 					
 					//Add databases that were used.
@@ -323,94 +304,94 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 		builder.append("<a href=\"" + urlHigh + "\"> High energy MS image </a><br /></p>");
 	}
 	
-	public void NMR(){
+//	public void NMR(){
 		//NMR tables
-		builder.append("<h3> NMR peak lists and images predicted by HMDB <sup>2</sup>: </h3>");
+//		builder.append("<h3> NMR peak lists and images predicted by HMDB <sup>2</sup>: </h3>");
 		
 		//1H NMR predicted spectra
 		
-		//1H NMR spectrum image link
-		String H1NMRLink = "http://www.hmdb.ca/labm/metabolites/" + HMDB + 
-				"/chemical/pred_hnmr_spectrum/";
-		H1NMRLink = "<a href=\"" + H1NMRLink + "\"> Spectrum image </a><br /><br />";
-	
-		//1H NMR peak list
-		String H1NMR = null;
-		try {
-		//Set up connection and put InChI key into a string
-			HttpClient httpclient = new DefaultHttpClient();
-			HttpGet getH1NMR = new HttpGet("http://www.hmdb.ca/labm/metabolites/"
-			+ HMDB + "/chemical/pred_hnmr_peaklist/" + HMDB + "_peaks.txt");
-
-			HttpResponse response = null;
-			response = httpclient.execute(getH1NMR);
-
-			HttpEntity entity = response.getEntity();
-			H1NMR = EntityUtils.toString(entity);
-			if (H1NMR.startsWith("Group")){
-				H1NMR = H1NMR.replace("	", "</td><td>");
-				H1NMR = H1NMR.replace("\n", "</tr><tr>");
-				H1NMR = H1NMR.replace("<td></td>", "");
-				H1NMR = "Peak list: <br /><table border=\"0\"><tr> " + H1NMR + "</tr></table>";
-				//TODO remove last column (the most right)
-				builder.append("<p><sup>1</sup>H NMR peak list and image predicted by HMDB<sup>2</sup>: <br /></p>");
-				builder.append(H1NMRLink + H1NMR);
-			}
-			else {builder.append("<i>Peak list is not available</i>");}
-		} catch (ClientProtocolException ClientException) {
-			System.out.println("clientexception");
-			ClientException.printStackTrace();
-		} catch (IOException IoException) {
-			System.out.println("IOException");
-			IoException.printStackTrace();
-		} catch (Throwable throwable) {
-			System.out.println(throwable.getMessage());
-			  System.out.println("Throwableblabla");
-			  throwable.printStackTrace();
-		}
-		
-		
-		//13C NMR predicted spectra
-		
-		//13C NMR spectrum image
-		String C13NMRLink = "http://www.hmdb.ca/labm/metabolites/" + HMDB + 
-				"/chemical/pred_cnmr_spectrum/";
-		C13NMRLink = "<a href=\"" + C13NMRLink + "\"> Spectrum image </a><br /><br />";
-
-		//13C NMR peak list
-		String C13NMR = null;
-		try {
-		//Set up connection and put InChI key into a string
-			HttpClient httpclient = new DefaultHttpClient();
-			HttpGet getC13NMR = new HttpGet("http://www.hmdb.ca/labm/metabolites/"
-			+ HMDB + "/chemical/pred_cnmr_peaklist/" + HMDB + "_peaks.txt");
-			HttpResponse response = null;
-			response = httpclient.execute(getC13NMR);
-
-			HttpEntity entity = response.getEntity();
-			C13NMR = EntityUtils.toString(entity);
-			if (C13NMR.startsWith("Carbon")){
-				C13NMR = C13NMR.replace("	", "</td><td>");
-				C13NMR = C13NMR.replace("\n", "</tr><tr>");
-				C13NMR = "Peak list: <br /><table border=\"0\"><tr> " + C13NMR + "</tr></table>";
-				//TODO remove last column (the most right)
-				builder.append("<br /> <p><sup>13</sup>C NMR peak list and image predicted by HMDB<sup>2</sup>: <br /></p>");
-				builder.append(C13NMRLink + C13NMR);
-			}
-			else {builder.append("<i> Peak list could not be loaded</i>");}
-
-		} catch (ClientProtocolException ClientException) {
-			System.out.println(ClientException.getMessage());
-			ClientException.printStackTrace();
-		} catch (IOException IoException) {
-			System.out.println(IoException.getMessage());
-			IoException.printStackTrace();
-		} catch (Throwable throwable) {
-			  System.out.println(throwable.getMessage());
-			  throwable.printStackTrace();
-		}
-		
-	}
+//		//1H NMR spectrum image link
+//		String H1NMRLink = "http://www.hmdb.ca/labm/metabolites/" + HMDB + 
+//				"/chemical/pred_hnmr_spectrum/";
+//		H1NMRLink = "<a href=\"" + H1NMRLink + "\"> Spectrum image </a><br /><br />";
+//	
+//		//1H NMR peak list
+//		String H1NMR = null;
+//		try {
+//		//Set up connection and put InChI key into a string
+//			DefaultHttpClient httpclient = new DefaultHttpClient();
+//			HttpGet getH1NMR = new HttpGet("http://www.hmdb.ca/labm/metabolites/"
+//			+ HMDB + "/chemical/pred_hnmr_peaklist/" + HMDB + "_peaks.txt");
+//
+//			HttpResponse response = null;
+//			response = httpclient.execute(getH1NMR);
+//
+//			HttpEntity entity = response.getEntity();
+//			H1NMR = EntityUtils.toString(entity);
+//			if (H1NMR.startsWith("Group")){
+//				H1NMR = H1NMR.replace("	", "</td><td>");
+//				H1NMR = H1NMR.replace("\n", "</tr><tr>");
+//				H1NMR = H1NMR.replace("<td></td>", "");
+//				H1NMR = "Peak list: <br /><table border=\"0\"><tr> " + H1NMR + "</tr></table>";
+//				//TODO remove last column (the most right)
+//				builder.append("<p><sup>1</sup>H NMR peak list and image predicted by HMDB<sup>2</sup>: <br /></p>");
+//				builder.append(H1NMRLink + H1NMR);
+//			}
+//			else {builder.append("<i>Peak list is not available</i>");}
+//		} catch (ClientProtocolException ClientException) {
+//			System.out.println("clientexception");
+//			ClientException.printStackTrace();
+//		} catch (IOException IoException) {
+//			System.out.println("IOException");
+//			IoException.printStackTrace();
+//		} catch (Throwable throwable) {
+//			System.out.println(throwable.getMessage());
+//			  System.out.println("Throwableblabla");
+//			  throwable.printStackTrace();
+//		}
+//		
+//		
+//		//13C NMR predicted spectra
+//		
+//		//13C NMR spectrum image
+//		String C13NMRLink = "http://www.hmdb.ca/labm/metabolites/" + HMDB + 
+//				"/chemical/pred_cnmr_spectrum/";
+//		C13NMRLink = "<a href=\"" + C13NMRLink + "\"> Spectrum image </a><br /><br />";
+//
+//		//13C NMR peak list
+//		String C13NMR = null;
+//		try {
+//		//Set up connection and put InChI key into a string
+//			DefaultHttpClient httpclient = new DefaultHttpClient();
+//			HttpGet getC13NMR = new HttpGet("http://www.hmdb.ca/labm/metabolites/"
+//			+ HMDB + "/chemical/pred_cnmr_peaklist/" + HMDB + "_peaks.txt");
+//			HttpResponse response = null;
+//			response = httpclient.execute(getC13NMR);
+//
+//			HttpEntity entity = response.getEntity();
+//			C13NMR = EntityUtils.toString(entity);
+//			if (C13NMR.startsWith("Carbon")){
+//				C13NMR = C13NMR.replace("	", "</td><td>");
+//				C13NMR = C13NMR.replace("\n", "</tr><tr>");
+//				C13NMR = "Peak list: <br /><table border=\"0\"><tr> " + C13NMR + "</tr></table>";
+//				//TODO remove last column (the most right)
+//				builder.append("<br /> <p><sup>13</sup>C NMR peak list and image predicted by HMDB<sup>2</sup>: <br /></p>");
+//				builder.append(C13NMRLink + C13NMR);
+//			}
+//			else {builder.append("<i> Peak list could not be loaded</i>");}
+//
+//		} catch (ClientProtocolException ClientException) {
+//			System.out.println(ClientException.getMessage());
+//			ClientException.printStackTrace();
+//		} catch (IOException IoException) {
+//			System.out.println(IoException.getMessage());
+//			IoException.printStackTrace();
+//		} catch (Throwable throwable) {
+//			  System.out.println(throwable.getMessage());
+//			  throwable.printStackTrace();
+//		}
+//		
+//	}
 	
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////GENERATE IATOMCONTAINER FOR METABOLITE/////////////////////////////////////
@@ -420,10 +401,10 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 		String text = sm;
 		try
 		{
-			SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
+			SmilesParser sp = new SmilesParser(SilentChemObjectBuilder.getInstance());
 			molecule = sp.parseSmiles(text);
 			CDKHydrogenAdder adder = CDKHydrogenAdder.getInstance(
-					DefaultChemObjectBuilder.getInstance());
+					SilentChemObjectBuilder.getInstance());
 			adder.addImplicitHydrogens(molecule);
 			AtomContainerManipulator.convertImplicitToExplicitHydrogens(molecule);
 		}

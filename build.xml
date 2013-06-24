@@ -7,30 +7,32 @@
   <property name="base.name" value="org.pathvisio.metaboliteinfo"/>
   <property name="jar.name" value="${base.name}.jar"/>
   <property name="pathvisio.dir" value="C:/Users/User/pathvisio"/>
-	<property name="bundle.dest" value="dist"/>
-	
+  <property name="common-bundles.dir" value="C:/Users/User/Common-Bundles"/>
+  <property name="bundle.dest" value="dist"/>
+
+	<!-- embedded jars are embedded in the resulting bundle -->
+		<path id="embed.jars">
+	    	<fileset dir="lib" includes="*.jar"/>
+		</path>
+
 	<path id="project.class.path">
-		<fileset dir="${pathvisio.dir}/modules">
-			<include name="**/*.jar"/>
+        <fileset dir="${pathvisio.dir}/modules">
+   		     <include name="org.pathvisio.core.jar"/>
+            <include name="org.pathvisio.gui.jar"/>
+            <include name="org.pathvisio.desktop.jar"/>
 		</fileset>
-		<fileset dir="${pathvisio.dir}/lib">
+        <fileset dir="${pathvisio.dir}/lib">
 			<include name="org.bridgedb.jar"/>
 			<include name="org.bridgedb.bio.jar"/>
 			<include name="com.springsource.org.apache.commons.logging-1.1.1.jar"/>
 			<include name="commons-codec-1.5.jar"/>
-			<include name="jni-inchi-0.9-SNAPSHOT.jar"/>
-                        <include name="org.eclipse.osgi.jar"/>
+            <include name="org.eclipse.osgi.jar"/>
+    	</fileset>
+		<fileset dir="${common-bundles.dir}/lib">
+			<include name="org.apache.commons.httpclient_3.0.1.v201005080501.jar"/>
 		</fileset>
-		<fileset dir="lib">
-			<include name="cdk-1.4.9.jar"/>
-			<include name="fluent-hc-4.2.jar"/>
-			<include name="httpclient-4.2.jar"/>
-			<include name="httpclient-cache-4.2.jar"/>
-			<include name="httpcore-4.2.jar"/>
-			<include name="httpmime-4.2.jar"/>
-			<include name="org.apache.httpcomponents.httpclient_4.2.jar"/>
-		</fileset>
-	</path>
+    </path>
+	
   
   <target name="prepare">
 	<mkdir dir="build"/>
@@ -40,40 +42,7 @@
 		</condition>
 	</fail>
   </target>
-  
-  <target name="build" depends="prepare">
-	<javac srcdir="."
-		   includes="**"
-		   debug="true"
-		   destdir="build">
-	  <classpath refid="project.class.path"/>
-	</javac>
-  </target>
-  
-	<target name="jar" depends="build"> 
-		<mkdir dir="${bundle.dest}"/>
-		<copy file="commons-codec-1.5.jar" toDir="${bundle.dest}" flatten="true"/>
-		<unjar src="lib/cdk-1.4.9.jar" dest="build"/>
-		<unjar src="lib/fluent-hc-4.2.jar" dest="build"/>
-		<unjar src="lib/httpclient-4.2.jar" dest="build"/>
-		<unjar src="lib/httpclient-cache-4.2.jar" dest="build"/>
-		<unjar src="lib/httpcore-4.2.jar" dest="build"/>
-		<unjar src="lib/httpmime-4.2.jar" dest="build"/>
-		<unjar src="commons-codec-1.5.jar" dest="build"/>
-		<unjar src="lib/org.apache.httpcomponents.httpclient_4.2.jar" dest="build"/>
-		<echo>Creating JAR: ${jar.name}</echo>
-		<jar jarfile="${bundle.dest}/${jar.name}" basedir="build" manifest="META-INF/MANIFEST.MF"  />
-		
-		
-	</target>
-
-  <target name="clean">
-	<delete dir="build"/>
-  	<delete dir="${bundle.dest}"/>
-  </target>
-
-  <target name="dist-clean" depends="clean">
-	<delete file="${jar.name}"/>
-  </target>
-
+	<!-- Use a future version of plugin-common.xml,
+	     Until we have time to update the other plugins -->
+	<import file="${pathvisio.dir}/plugin-common.xml" />
 </project>
