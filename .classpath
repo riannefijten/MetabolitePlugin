@@ -24,5 +24,6 @@
 	<classpathentry kind="lib" path="lib/org.openscience.cdk.valencycheck_1.5.2.git1_cdk-152-2.jar"/>
 	<classpathentry kind="lib" path="lib/org.openscience.cdk.formula_1.5.2.git1_cdk-152-2.jar"/>
 	<classpathentry kind="lib" path="lib/javax.vecmath_1.2.1.14.jar"/>
+	<classpathentry kind="lib" path="lib/org.3pq.jgrapht_0.6.0.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
