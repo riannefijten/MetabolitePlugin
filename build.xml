@@ -6,7 +6,7 @@
   
   <property name="base.name" value="org.pathvisio.metaboliteinfo"/>
   <property name="jar.name" value="${base.name}.jar"/>
-  <property name="pathvisio.dir" value="../../pathvisio"/>
+  <property name="pathvisio.dir" value="C:/Users/User/pathvisio"/>
 	<property name="bundle.dest" value="dist"/>
 	
 	<path id="project.class.path">
