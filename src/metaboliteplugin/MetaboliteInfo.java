@@ -278,24 +278,22 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 					//MSImages();
 					//NMR();
 					HOSEGenerator(molecule);
-					
-					
-//					String PathwayName;
-//					System.out.println("PathwayName2: ");
-//					String DataNode = e.toString(); String DataNode2 = DataNode.replace("org.pathvisio.core.model.PathwayElement@", "");
-//					String endpoint = "sparql.wikipathways.org";
-//					String queryString = "select * where {?s ?p ?o . FILTER regex(str(?s), \"^http://rdf.wikipathways.org/Pathway/" + PathwayName + "/DataNode/" + DataNode2 + ")}";
-//					String user = null;
-//					String password = null;
-//					sparqlRemoteNoJena(endpoint, queryString, user, password);
-					
-					
+										
+					String endpoint = "http://sparql.wikipathways.org";
+					String queryString = "prefix wp: <http://vocabularies.wikipathways.org/wp#> " + 
+							"prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> " +
+							"prefix dcterms:  <http://purl.org/dc/terms/> " +
+							"select distinct ?mb " +
+							"where {?mb a wp:Metabolite ; dc:source \"HMDB\"^^xsd:string ; dc:identifier <http://identifiers.org/hmdb/" + HMDB +"> .} ";
+					String user = null;
+					String password = null;
+					sparqlRemoteNoJena(endpoint, queryString, user, password);
 					
 					//Add databases that were used.
-					builder.append("<p> Databases used: <br />" +
-							"<sup>1</sup> <a href=\"http://cactus.nci.nih.gov/chemical/structure\"> Cactus Chemical Identifier Resolver </a><br />" +
-							"<sup>2</sup> <a href=\"http://www.hmdb.ca\"> HMDB database </a><br />" +
-							"<sup>3</sup> <a href=\"http://sourceforge.net/projects/cdk/\"> Chemistry Development Kit </a>");
+//					builder.append("<p> Databases used: <br />" +
+//							"<sup>1</sup> <a href=\"http://cactus.nci.nih.gov/chemical/structure\"> Cactus Chemical Identifier Resolver </a><br />" +
+//							"<sup>2</sup> <a href=\"http://www.hmdb.ca\"> HMDB database </a><br />" +
+//							"<sup>3</sup> <a href=\"http://sourceforge.net/projects/cdk/\"> Chemistry Development Kit </a>");
 				}
 				catch (IDMapperException ex)
 				{
@@ -335,8 +333,6 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 		//System.out.println(input);
 		
 	}
-
-
 		
 	public void MSImages(){
 		//MS images
@@ -518,7 +514,7 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 	
 	
 	
-	public static String sparqlRemoteNoJena(String endpoint, String queryString, String user, String password)
+	public String sparqlRemoteNoJena(String endpoint, String queryString, String user, String password)
 			  throws Exception {
 			      String s = null;
 
@@ -543,28 +539,36 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 			         
 			      List<NameValuePair> formparams = new ArrayList<NameValuePair>();
 			      formparams.add(new BasicNameValuePair("query", queryString));
+			      System.out.println("formparams: " + formparams);
 			      UrlEncodedFormEntity entity = new UrlEncodedFormEntity(formparams, "UTF-8");
 			      HttpPost httppost = new HttpPost(endpoint);
+			      System.out.println("HttpPost: " + httppost);
 			      httppost.setEntity(entity);
 			      HttpResponse response = httpclient.execute(httppost);
+			      System.out.println("HttpResponse: " + response);
 			      HttpEntity responseEntity = response.getEntity();
 			      InputStream in = responseEntity.getContent();
 	
 			      // create a new DocumentBuilderFactory
 			      DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+			      System.out.println("Factory: " + factory);
 
 			      try {
 			         // use the factory to create a documentbuilder
 			         DocumentBuilder builder = factory.newDocumentBuilder();
-	
+			         System.out.println("Builder: " + builder);
 			         // create a new document from input source
 			         Document doc = builder.parse(in);
+			         System.out.println("doc: " + doc);
 			         Element root = doc.getDocumentElement();
 			         s = root.toString();
+			         System.out.println("string s: " + s);
 			      } catch (Exception ex) {
 			         ex.printStackTrace();
+			         System.out.println("exception ex");
 			      }
 			      in.close();
+			      builder.append(s);
 			      return s;
 		   }
 }
