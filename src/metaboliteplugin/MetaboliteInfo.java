@@ -609,6 +609,7 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 	public static  StringMatrix sparql(Model model, String queryString) throws Exception {
 		  StringMatrix table = null;
 		  List<String> tablePeaks = null;
+		  List<String> tableSpectrum = null;
 		  List<String> tableNucleus = null;
 		  
 		  //create table layout
@@ -625,23 +626,23 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 	          
 	          if (queryString.contains("?peak")){
 	        	  tablePeaks = table.getColumn("peak");
-	        	  if (queryString.contains("NMR")){
+	        	  if (queryString.contains("hasNucleas")){
+	        		  System.out.println("YESSSSSS");
 		        	  tableNucleus = table.getColumn("nucleus");
+		        	  System.out.println("tableNucleus: " + tableNucleus);
 		        	  System.out.println("tableNucleus: " + tableNucleus);
 		        	  String tableNucleusS = tableNucleus.get(0);
 		        	  builder.append("<tr><td> NMR type: " + tableNucleusS + "<td></tr>");
 		          }
+	        	  for (String peakStr : tablePeaks) {
+		        	  peakStr = peakStr.replace("^^http://www.w3.org/2000/10/XMLSchema#float", "");
+		        	//add peak values into table 
+		        	  builder.append("<tr><td>" + peakStr + "</td></tr>");
+	        	  }
 	          }
 	          else {
-	        	  tablePeaks = table.getColumn("spectrum");
-	          }
-	          	          	          
-	          for (String peakStr : tablePeaks) {
-	        	  peakStr = peakStr.replace("^^http://www.w3.org/2000/10/XMLSchema#float", "");
-	        	  
-	        	  //add peak values into table 
-	        	  builder.append("<tr><td>" + peakStr + "</td></tr>");
-	          }
+	        	  tableSpectrum = table.getColumn("spectrum");
+	          }       	  
 	      } finally {
 	          qexec.close();
 	      }
@@ -718,8 +719,8 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 	  }
 	
 	public static Model loadRdf(Model appendTo) throws Exception {
-		String file = "/metaboliteplugin/hmdb_spectra.ttl"; System.out.println("file: " + file);
-		InputStream ins = MetaboliteInfo.class.getClassLoader().getResourceAsStream(file); System.out.println("ins: " + ins);
+		String file = "/metaboliteplugin/hmdb_spectra.ttl";
+		InputStream ins = MetaboliteInfo.class.getClassLoader().getResourceAsStream(file);
         appendTo.read(ins, "", "TTL");
         return appendTo;
 	  }
