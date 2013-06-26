@@ -4,40 +4,29 @@
 
 package metaboliteplugin;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URL;
-import java.sql.ResultSet;
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import javax.management.Query;
 import javax.swing.JEditorPane;
 import javax.swing.SwingUtilities;
+import javax.swing.table.TableStringConverter;
 import javax.swing.text.html.HTMLEditorKit;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
 
 import net.sf.jniinchi.JniInchiInput;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
-import org.apache.http.NameValuePair;
-import org.apache.http.auth.AuthScope;
-import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.ClientProtocolException;
-import org.apache.http.client.CredentialsProvider;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
 import org.bridgedb.IDMapper;
 import org.bridgedb.IDMapperException;
@@ -58,7 +47,6 @@ import org.pathvisio.core.Engine;
 import org.pathvisio.core.Engine.ApplicationEventListener;
 import org.pathvisio.core.data.GdbManager;
 import org.pathvisio.core.debug.Logger;
-import org.pathvisio.core.model.ObjectType;
 import org.pathvisio.core.model.PathwayElement;
 import org.pathvisio.core.model.PathwayElementEvent;
 import org.pathvisio.core.model.PathwayElementListener;
@@ -69,10 +57,16 @@ import org.pathvisio.core.view.SelectionBox.SelectionListener;
 import org.pathvisio.core.view.VPathway;
 import org.pathvisio.core.view.VPathwayElement;
 import org.pathvisio.gui.SwingEngine;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.NodeList;
-import org.xml.sax.InputSource;
+
+import com.hp.hpl.jena.query.QueryExecution;
+import com.hp.hpl.jena.query.QueryExecutionFactory;
+import com.hp.hpl.jena.query.QueryFactory;
+import com.hp.hpl.jena.query.QuerySolution;
+import com.hp.hpl.jena.rdf.model.Model;
+import com.hp.hpl.jena.rdf.model.ModelFactory;
+import com.hp.hpl.jena.rdf.model.RDFNode;
+import com.hp.hpl.jena.rdf.model.Resource;
+import com.hp.hpl.jena.shared.PrefixMapping;
 
 
 public class MetaboliteInfo extends JEditorPane implements SelectionListener, PathwayElementListener, ApplicationEventListener
@@ -94,7 +88,7 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 	
 	private GdbManager gdbManager;
 	private final SwingEngine se;
-
+	Model model;
 	public MetaboliteInfo(SwingEngine se)
 	{
 //		super();
@@ -125,6 +119,18 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 				return null;
 			}
 		});
+		
+		//Create RDF model
+	
+		try {
+			model = newRdf();
+			loadRdf(model);
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			System.out.println("Exception in creation of RDF model");
+		} 
+		
 	}
 		
 	public void setInput(final PathwayElement e) 
@@ -230,7 +236,7 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////PLUGIN CONTENT////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	private StringBuilder builder = new StringBuilder();
+	private static StringBuilder builder = new StringBuilder();
 	private String HMDB = null;
 	private String smiles = null;
 	private String name = null;
@@ -278,22 +284,46 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 					//MSImages();
 					//NMR();
 					HOSEGenerator(molecule);
-										
-					String endpoint = "http://sparql.wikipathways.org";
-					String queryString = "prefix wp: <http://vocabularies.wikipathways.org/wp#> " + 
-							"prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> " +
-							"prefix dcterms:  <http://purl.org/dc/terms/> " +
-							"select distinct ?mb " +
-							"where {?mb a wp:Metabolite ; dc:source \"HMDB\"^^xsd:string ; dc:identifier <http://identifiers.org/hmdb/" + HMDB +"> .} ";
-					String user = null;
-					String password = null;
-					sparqlRemoteNoJena(endpoint, queryString, user, password);
+					//String endpoint = "http://sparql.wikipathways.org/";
 					
-					//Add databases that were used.
-//					builder.append("<p> Databases used: <br />" +
-//							"<sup>1</sup> <a href=\"http://cactus.nci.nih.gov/chemical/structure\"> Cactus Chemical Identifier Resolver </a><br />" +
-//							"<sup>2</sup> <a href=\"http://www.hmdb.ca\"> HMDB database </a><br />" +
-//							"<sup>3</sup> <a href=\"http://sourceforge.net/projects/cdk/\"> Chemistry Development Kit </a>");
+//					String queryString1 = "prefix wp: <http://vocabularies.wikipathways.org/wp#> " + 
+//							"prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> " +
+//							"prefix dcterms:  <http://purl.org/dc/terms/> " +
+//							"select distinct ?mb " +
+//							"where {?mb a wp:Metabolite ; dc:source \"HMDB\"^^xsd:string ; dc:identifier <http://identifiers.org/hmdb/" + HMDB +"> .} ";
+
+					//String user = null;
+					//String password = null;
+					//sparqlRemoteNoJena(endpoint, queryString, user, password);
+
+					//first sparql queries
+					
+					String queryStringMS1 = "select ?spectrum " + 
+							"where {?spectrum  a <http://linkedchemistry.info/hmdb/MassSpectrum>; " + 
+							"<http://linkedchemistry.info/hmdb/forMolecule> <http://identifier.org/hmdb/" + HMDB + ">;}";
+					String queryStringNMR1 = "select ?spectrum " + 
+							"where {?spectrum  a <http://linkedchemistry.info/hmdb/NMRSpectrum>; " + 
+							"<http://linkedchemistry.info/hmdb/forMolecule> <http://identifier.org/hmdb/" + HMDB + ">;}";
+					
+					List<String> MSspectra = sparql(model, queryStringMS1).getColumn("spectrum");
+					List<String> NMRspectra = sparql(model, queryStringNMR1).getColumn("spectrum");
+					
+					for (String spectrum : MSspectra) {
+						//Second sparql queries
+						String queryStringMS2 = "select ?peak " + 
+								"where { <" + spectrum + "> " +
+								" <http://linkedchemistry.info/hmdb/hasPeak> ?peak .}";
+						builder.append("<p>MS spectra<br />");
+						sparql(model, queryStringMS2);
+					}
+					for (String spectrum : NMRspectra) {
+						String queryStringNMR2 = "select ?peak ?nucleus " + 
+								"where { <" + spectrum + "> " +
+								"<http://linkedchemistry.info/hmdb/hasNucleas> ?nucleus;" + 
+								"<http://linkedchemistry.info/hmdb/hasPeak> ?peak .}";
+						builder.append("<p>\n NMR spectra<br />");
+						sparql(model, queryStringNMR2);
+						}
 				}
 				catch (IDMapperException ex)
 				{
@@ -511,64 +541,190 @@ public class MetaboliteInfo extends JEditorPane implements SelectionListener, Pa
 	//String PathwayName;
 	//String DataNodeCode = input.toString();	
 	
+		
+//	public String sparqlRemoteNoJena(String endpoint, String queryString, String user, String password)
+//			  throws Exception {
+//			      String s = null;
+//
+//			      // use Apache for doing the SPARQL query
+//			      DefaultHttpClient httpclient = new DefaultHttpClient();
+//
+//			      
+//			      // TEST TEST
+//			      System.out.println("endpoint: " + endpoint);
+//			      System.out.println("queryString: " + queryString);
+//			      
+//			      // Set credentials on the client
+//			      if (user != null) {
+//			    	  URL endpointURL = new URL(endpoint);
+//			    	  CredentialsProvider credsProvider = new BasicCredentialsProvider();
+//			    	  credsProvider.setCredentials(
+//			            new AuthScope(endpointURL.getHost(), AuthScope.ANY_PORT), 
+//			            new UsernamePasswordCredentials(user, password)
+//			          );
+//			    	  httpclient.setCredentialsProvider(credsProvider);
+//			      }
+//			         
+//			      List<NameValuePair> formparams = new ArrayList<NameValuePair>();
+//			      formparams.add(new BasicNameValuePair("query", queryString));
+//			      System.out.println("formparams: " + formparams);
+//			      UrlEncodedFormEntity entity = new UrlEncodedFormEntity(formparams, "UTF-8");
+//			      HttpPost httppost = new HttpPost(endpoint);
+//			      System.out.println("HttpPost: " + httppost);
+//			      httppost.setEntity(entity);
+//			      HttpResponse response = httpclient.execute(httppost);
+//			      System.out.println("HttpResponse: " + response);
+//			      HttpEntity responseEntity = response.getEntity();
+//			      InputStream in = responseEntity.getContent();
+//	
+//			      // create a new DocumentBuilderFactory
+//			      DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+//			      System.out.println("Factory: " + factory);
+//
+//			      try {
+//			         // use the factory to create a documentbuilder
+//			         DocumentBuilder builder = factory.newDocumentBuilder();
+//			         System.out.println("Builder: " + builder);
+//			         // create a new document from input source
+//			         Document doc = builder.parse(in);
+//			         System.out.println("doc: " + doc);
+//			         Element root = doc.getDocumentElement();
+//			         s = root.toString();
+//			         System.out.println("string s: " + s);
+//			      } catch (Exception ex) {
+//			         ex.printStackTrace();
+//			         System.out.println("exception ex");
+//			      }
+//			      in.close();
+//			      builder.append(s);
+//			      return s;
+//		   }
 	
 	
 	
-	public String sparqlRemoteNoJena(String endpoint, String queryString, String user, String password)
-			  throws Exception {
-			      String s = null;
-
-			      // use Apache for doing the SPARQL query
-			      DefaultHttpClient httpclient = new DefaultHttpClient();
-
-			      
-			      // TEST TEST
-			      System.out.println("endpoint: " + endpoint);
-			      System.out.println("queryString: " + queryString);
-			      
-			      // Set credentials on the client
-			      if (user != null) {
-			    	  URL endpointURL = new URL(endpoint);
-			    	  CredentialsProvider credsProvider = new BasicCredentialsProvider();
-			    	  credsProvider.setCredentials(
-			            new AuthScope(endpointURL.getHost(), AuthScope.ANY_PORT), 
-			            new UsernamePasswordCredentials(user, password)
-			          );
-			    	  httpclient.setCredentialsProvider(credsProvider);
-			      }
-			         
-			      List<NameValuePair> formparams = new ArrayList<NameValuePair>();
-			      formparams.add(new BasicNameValuePair("query", queryString));
-			      System.out.println("formparams: " + formparams);
-			      UrlEncodedFormEntity entity = new UrlEncodedFormEntity(formparams, "UTF-8");
-			      HttpPost httppost = new HttpPost(endpoint);
-			      System.out.println("HttpPost: " + httppost);
-			      httppost.setEntity(entity);
-			      HttpResponse response = httpclient.execute(httppost);
-			      System.out.println("HttpResponse: " + response);
-			      HttpEntity responseEntity = response.getEntity();
-			      InputStream in = responseEntity.getContent();
+///////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////SPARQL WITH JENA/////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////
 	
-			      // create a new DocumentBuilderFactory
-			      DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-			      System.out.println("Factory: " + factory);
-
-			      try {
-			         // use the factory to create a documentbuilder
-			         DocumentBuilder builder = factory.newDocumentBuilder();
-			         System.out.println("Builder: " + builder);
-			         // create a new document from input source
-			         Document doc = builder.parse(in);
-			         System.out.println("doc: " + doc);
-			         Element root = doc.getDocumentElement();
-			         s = root.toString();
-			         System.out.println("string s: " + s);
-			      } catch (Exception ex) {
-			         ex.printStackTrace();
-			         System.out.println("exception ex");
-			      }
-			      in.close();
-			      builder.append(s);
-			      return s;
-		   }
+	public static  StringMatrix sparql(Model model, String queryString) throws Exception {
+		  StringMatrix table = null;
+		  List<String> tablePeaks = null;
+		  List<String> tableNucleus = null;
+		  
+		  //create table layout
+		  builder.append("<table border=\"0\">");
+		  		  
+		  //start query
+	      com.hp.hpl.jena.query.Query query = QueryFactory.create(queryString);
+	      PrefixMapping prefixMap = query.getPrefixMapping();
+	      QueryExecution qexec = QueryExecutionFactory.create(query, model);
+	      try {
+	          com.hp.hpl.jena.query.ResultSet results = qexec.execSelect();
+	          table = convertIntoTable(prefixMap, results);
+	          
+	          
+	          if (queryString.contains("?peak")){
+	        	  tablePeaks = table.getColumn("peak");
+	        	  if (queryString.contains("NMR")){
+		        	  tableNucleus = table.getColumn("nucleus");
+		        	  System.out.println("tableNucleus: " + tableNucleus);
+		        	  String tableNucleusS = tableNucleus.get(0);
+		        	  builder.append("<tr><td> NMR type: " + tableNucleusS + "<td></tr>");
+		          }
+	          }
+	          else {
+	        	  tablePeaks = table.getColumn("spectrum");
+	          }
+	          	          	          
+	          for (String peakStr : tablePeaks) {
+	        	  peakStr = peakStr.replace("^^http://www.w3.org/2000/10/XMLSchema#float", "");
+	        	  
+	        	  //add peak values into table 
+	        	  builder.append("<tr><td>" + peakStr + "</td></tr>");
+	          }
+	      } finally {
+	          qexec.close();
+	      }
+	      return table;
+	  }
+	
+	private static StringMatrix convertIntoTable(PrefixMapping prefixMap, com.hp.hpl.jena.query.ResultSet results) {
+	      StringMatrix table = new StringMatrix();
+	      int rowCount = 0;
+	      while (results.hasNext()) {
+	              rowCount++;
+	          QuerySolution soln = results.nextSolution();
+	          Iterator<String> varNames = soln.varNames();
+	          while (varNames.hasNext()) {
+	              String varName = varNames.next();
+	              int colCount = -1;
+	              if (table.hasColumn(varName)) {
+	            	  colCount = table.getColumnNumber(varName);
+	              } else {
+	            	  colCount = table.getColumnCount() + 1;
+	                  table.setColumnName(colCount, varName);
+	              }
+	              RDFNode node = soln.get(varName);
+	              if (node != null) {
+	                  String nodeStr = node.toString();
+	                  if (node.isResource()) {
+	                      Resource resource = (Resource)node;
+	                      // the resource.getLocalName() is not accurate, so I
+	                      // use some custom code
+	                      String[] uriLocalSplit = split(prefixMap, resource);
+	                      if (uriLocalSplit[0] == null) {
+	                              if (resource.getURI() != null) {
+	                                      table.set(rowCount, colCount, resource.getURI());
+	                              } else {
+	                                      // anonymous node
+	                                      table.set(rowCount, colCount, "" + resource.hashCode());
+	                              }
+	                      } else {
+	                              table.set(rowCount, colCount,
+	                              uriLocalSplit[0] + ":" + uriLocalSplit[1]
+	                          );
+	                      }
+	                  } else {
+	                      if (nodeStr.endsWith("@en"))
+	                              nodeStr = nodeStr.substring(
+	                                      0, nodeStr.lastIndexOf('@')
+	                              );
+	                      table.set(rowCount, colCount, nodeStr);
+	                  }
+	              }
+	          }
+	      }
+	      return table;
+	  }
+	
+	public static String[] split(PrefixMapping prefixMap, Resource resource) {
+	      String uri = resource.getURI();
+	      if (uri == null) {
+	          return new String[] {null, null};
+	      }
+	      Map<String,String> prefixMapMap = prefixMap.getNsPrefixMap();
+	      Set<String> prefixes = prefixMapMap.keySet();
+	      String[] split = { null, null };
+	      for (String key : prefixes){
+	          String ns = prefixMapMap.get(key);
+	          if (uri.startsWith(ns)) {
+	              split[0] = key;
+	              split[1] = uri.substring(ns.length());
+	              return split;
+	          }
+	      }
+	      split[1] = uri;
+	      return split;
+	  }
+	
+	public static Model loadRdf(Model appendTo) throws Exception {
+		String file = "/metaboliteplugin/hmdb_spectra.ttl"; System.out.println("file: " + file);
+		InputStream ins = MetaboliteInfo.class.getClassLoader().getResourceAsStream(file); System.out.println("ins: " + ins);
+        appendTo.read(ins, "", "TTL");
+        return appendTo;
+	  }
+	
+	public static Model newRdf() throws Exception {
+	    return ModelFactory.createDefaultModel();
+	  }
 }

@@ -13,7 +13,8 @@ Require-Bundle: org.pathvisio.desktop;bundle-version="2.0.11",
  org.bridgedb;bundle-version="1.1.0",
  org.bridgedb.bio;bundle-version="1.1.0",
  org.bridgedb.rdb;bundle-version="1.1.0",
- org.bridgedb.rdb.construct;bundle-version="1.1.0"
+ org.bridgedb.rdb.construct;bundle-version="1.1.0",
+ org.apache.xerces;bundle-version="2.9.0"
 Bundle-ClassPath: .,
  lib/commons-codec-1.6.jar,
  lib/commons-logging-1.1.1.jar,
@@ -36,5 +37,14 @@ Bundle-ClassPath: .,
  lib/org.openscience.cdk.standard_1.5.2.git1_cdk-152-2.jar,
  lib/org.openscience.cdk.valencycheck_1.5.2.git1_cdk-152-2.jar,
  lib/javax.vecmath_1.2.1.14.jar,
- lib/org.3pq.jgrapht_0.6.0.jar
+ lib/org.3pq.jgrapht_0.6.0.jar,
+ lib/jena-arq-2.10.1.jar,
+ lib/jena-core-2.10.1.jar,
+ lib/jena-iri-0.9.6.jar,
+ lib/jena-tdb-0.10.1.jar,
+ lib/jcl-over-slf4j-1.6.4.jar,
+ lib/log4j-1.2.16.jar,
+ lib/slf4j-api-1.6.4.jar,
+ lib/slf4j-log4j12-1.6.4.jar,
+ lib/xml-apis-1.4.01.jar
 
